@@ -20,14 +20,14 @@
 #include "block/aio.h"
 
 struct AioHandler {
-    GPollFD pfd;
-    IOHandler *io_read;
-    IOHandler *io_write;
-    AioPollFn *io_poll;
+    GPollFD pfd;		/* 要poll的fd */
+    IOHandler *io_read;		/* 可读事件回调 */
+    IOHandler *io_write;	/* 可写事件回调 */
+    AioPollFn *io_poll;		/* 抽象出的poll方法 */
     IOHandler *io_poll_begin;
     IOHandler *io_poll_end;
     void *opaque;
-    QLIST_ENTRY(AioHandler) node;
+    QLIST_ENTRY(AioHandler) node;	/* 用于加入AioContext中的aio_handlers链表 */
     QLIST_ENTRY(AioHandler) node_ready; /* only used during aio_poll() */
     QLIST_ENTRY(AioHandler) node_deleted;
     QLIST_ENTRY(AioHandler) node_poll;

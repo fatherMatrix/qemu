@@ -67,9 +67,12 @@ struct TypeImpl
     const char *parent;
     TypeImpl *parent_type;
 
+    /* 所有class类型的基类 */
     ObjectClass *class;
 
+    /* 接口的数量 */
     int num_interfaces;
+    /* 接口的字符名称数组 */
     InterfaceImpl interfaces[MAX_INTERFACES];
 };
 
@@ -286,10 +289,12 @@ static void type_initialize(TypeImpl *ti)
 {
     TypeImpl *parent;
 
+    /* 如果已经构造过了，直接返回 */
     if (ti->class) {
         return;
     }
 
+    /* 计算class和object的大小，其实这里必须在声明时进行配合指定长度 */
     ti->class_size = type_class_get_size(ti);
     ti->instance_size = type_object_get_size(ti);
     /* Any type with zero instance_size is implicitly abstract.
@@ -306,16 +311,26 @@ static void type_initialize(TypeImpl *ti)
         assert(!ti->instance_finalize);
         assert(!ti->num_interfaces);
     }
+    /* 以ti->class_size为大小分配ObjectClass */
     ti->class = g_malloc0(ti->class_size);
 
     parent = type_get_parent(ti);
     if (parent) {
+	/* 递归，初始化父类 */
         type_initialize(parent);
         GSList *e;
         int i;
 
         g_assert(parent->class_size <= ti->class_size);
         g_assert(parent->instance_size <= ti->instance_size);
+	/* 上边已经递归初始化了父class，也就是说运行到这里，父class的class字段
+	 * 已经初始化完成了。
+	 * 此时将父class的class字段的数据拷贝到当前class中的父class所占空间中，
+	 * 即完成父class的初始化。
+	 *
+	 * 这就是说，不同的Class具有各自不同的ObjectClass，可以在这里修改属于
+	 * 自己的ObjectClass或其他基类中的字段，进行多态？
+	 */
         memcpy(ti->class, parent->class, parent->class_size);
         ti->class->interfaces = NULL;
 
@@ -323,6 +338,7 @@ static void type_initialize(TypeImpl *ti)
             InterfaceClass *iface = e->data;
             ObjectClass *klass = OBJECT_CLASS(iface);
 
+	    /* 初始化接口? */
             type_initialize_interface(ti, iface->interface_type, klass->type);
         }
 
@@ -345,15 +361,25 @@ static void type_initialize(TypeImpl *ti)
                 continue;
             }
 
+            /* 初始化接口? */
             type_initialize_interface(ti, t, t);
         }
     }
 
+    /* 初始化ObjectClass的property哈希表。
+     *
+     * 要注意的是，ObjectClassX的propertyies哈希表是空的，没有将ObjectClass的
+     * properties哈希表拷贝过来，所以在查找ObjectClassX的属性时要记得查找
+     * ObjectClass的properties哈希表
+    */
     ti->class->properties = g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
                                                   object_property_free);
 
     ti->class->type = ti;
 
+    /* class_base_init用于在初始化完parent后消除memcpy带来的副作用，因此需要在
+     * class_init之前进行调用
+     */
     while (parent) {
         if (parent->class_base_init) {
             parent->class_base_init(ti->class, ti->class_data);
@@ -361,6 +387,7 @@ static void type_initialize(TypeImpl *ti)
         parent = type_get_parent(parent);
     }
 
+    /* 对类进行初始化，class_init函数在TypeInfo中应该给出 */
     if (ti->class_init) {
         ti->class_init(ti->class, ti->class_data);
     }
@@ -373,6 +400,7 @@ static void object_init_with_type(Object *obj, TypeImpl *ti)
     }
 
     if (ti->instance_init) {
+	/* 初始化对象 */
         ti->instance_init(obj);
     }
 }
@@ -503,6 +531,7 @@ static void object_class_property_init_all(Object *obj)
 
 static void object_initialize_with_type(Object *obj, size_t size, TypeImpl *type)
 {
+    /* 初始化ObjectClass */
     type_initialize(type);
 
     g_assert(type->instance_size >= sizeof(Object));
@@ -510,11 +539,15 @@ static void object_initialize_with_type(Object *obj, size_t size, TypeImpl *type
     g_assert(size >= type->instance_size);
 
     memset(obj, 0, type->instance_size);
+    /* object的class字段保存了Class的class字段 */
     obj->class = type->class;
     object_ref(obj);
+    /* 对ObjectClass的property调用init方法 */
     object_class_property_init_all(obj);
+    /* 对Object的property的哈希表进行初始化 */
     obj->properties = g_hash_table_new_full(g_str_hash, g_str_equal,
                                             NULL, object_property_free);
+    /* 调用type->instance_init() */
     object_init_with_type(obj, type);
     object_post_init_with_type(obj, type);
 }
@@ -708,6 +741,7 @@ typedef union {
 
 static Object *object_new_with_type(Type type)
 {
+    /* 类型Type为指向TypeImpl的指针 */
     Object *obj;
     size_t size, align;
     void (*obj_free)(void *);
@@ -722,6 +756,7 @@ static Object *object_new_with_type(Type type)
      * Do not use qemu_memalign unless required.  Depending on the
      * implementation, extra alignment implies extra overhead.
      */
+    /* 分配object的内存，大小为实际大小 */
     if (likely(align <= __alignof__(qemu_max_align_t))) {
         obj = g_malloc(size);
         obj_free = g_free;
@@ -1198,6 +1233,7 @@ object_property_try_add(Object *obj, const char *name, const char *type,
     ObjectProperty *prop;
     size_t name_len = strlen(name);
 
+    /* 处理通配符*的相关情况 */
     if (name_len >= 3 && !memcmp(name + name_len - 3, "[*]", 4)) {
         int i;
         ObjectProperty *ret = NULL;
@@ -1219,22 +1255,26 @@ object_property_try_add(Object *obj, const char *name, const char *type,
         return ret;
     }
 
+    /* 查找要插入的属性是否已经存在 */
     if (object_property_find(obj, name) != NULL) {
         error_setg(errp, "attempt to add duplicate property '%s' to object (type '%s')",
                    name, object_get_typename(obj));
         return NULL;
     }
 
+    /* 如果不存在重复的属性，则分配一个新的，初始化各种字段 */
     prop = g_malloc0(sizeof(*prop));
 
     prop->name = g_strdup(name);
     prop->type = g_strdup(type);
 
+    /* resolve字段是空的，不赋值? */
     prop->get = get;
     prop->set = set;
     prop->release = release;
     prop->opaque = opaque;
 
+    /* 将新分配的属性插入到哈希表中 */
     g_hash_table_insert(obj->properties, prop->name, prop);
     return prop;
 }
@@ -1246,6 +1286,7 @@ object_property_add(Object *obj, const char *name, const char *type,
                     ObjectPropertyRelease *release,
                     void *opaque)
 {
+    /* error_abort是一个全局变量 */
     return object_property_try_add(obj, name, type, get, set, release,
                                    opaque, &error_abort);
 }

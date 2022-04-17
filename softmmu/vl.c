@@ -2144,6 +2144,7 @@ static void qemu_create_machine(QDict *qdict)
 
     set_memory_options(machine_class);
 
+    /* current_machine的类型是MachineState *，对应的ObjectClassX是MachineClass */
     current_machine = MACHINE(object_new_with_class(OBJECT_CLASS(machine_class)));
     object_property_add_child(object_get_root(), "machine",
                               OBJECT(current_machine));

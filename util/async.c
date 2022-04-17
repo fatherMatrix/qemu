@@ -161,6 +161,7 @@ int aio_bh_poll(AioContext *ctx)
             continue;
         }
 
+	/* 如果设置了SCHEDULED则执行下半部 */
         if ((flags & (BH_SCHEDULED | BH_DELETED)) == BH_SCHEDULED) {
             /* Idle BHs don't count as progress */
             if (!(flags & BH_IDLE)) {
@@ -517,11 +518,15 @@ AioContext *aio_context_new(Error **errp)
     int ret;
     AioContext *ctx;
 
+    /* 这里分配了一个新的GSource，作为AioContext的第一个成员 */
     ctx = (AioContext *) g_source_new(&aio_source_funcs, sizeof(AioContext));
     QSLIST_INIT(&ctx->bh_list);
     QSIMPLEQ_INIT(&ctx->bh_slice_list);
     aio_context_setup(ctx);
 
+    /*
+     * 初始化eventfd，如果没有eventfd，使用pipe模拟
+     */
     ret = event_notifier_init(&ctx->notifier, false);
     if (ret < 0) {
         error_setg_errno(errp, -ret, "Failed to initialize event notifier");
@@ -530,9 +535,11 @@ AioContext *aio_context_new(Error **errp)
     g_source_set_can_recurse(&ctx->source, true);
     qemu_lockcnt_init(&ctx->list_lock);
 
+    /* 创建下半部 */
     ctx->co_schedule_bh = aio_bh_new(ctx, co_schedule_bh_cb, ctx);
     QSLIST_INIT(&ctx->scheduled_coroutines);
 
+    /* 添加AioHandlers */
     aio_set_event_notifier(ctx, &ctx->notifier,
                            false,
                            aio_context_notifier_cb,

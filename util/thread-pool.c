@@ -33,10 +33,10 @@ enum ThreadState {
 };
 
 struct ThreadPoolElement {
-    BlockAIOCB common;
-    ThreadPool *pool;
-    ThreadPoolFunc *func;
-    void *arg;
+    BlockAIOCB common;		/* 任务回调 */
+    ThreadPool *pool;		/* 所属线程池 */
+    ThreadPoolFunc *func;	/* 实际执行函数 */
+    void *arg;			/* 参数 */
 
     /* Moving state out of THREAD_QUEUED is protected by lock.  After
      * that, only the worker thread can write to it.  Reads and writes
@@ -46,31 +46,33 @@ struct ThreadPoolElement {
     int ret;
 
     /* Access to this list is protected by lock.  */
-    QTAILQ_ENTRY(ThreadPoolElement) reqs;
+    QTAILQ_ENTRY(ThreadPoolElement) reqs;	/* 链入ThreadPool->request_list */
 
     /* Access to this list is protected by the global mutex.  */
-    QLIST_ENTRY(ThreadPoolElement) all;
+    QLIST_ENTRY(ThreadPoolElement) all;		/* 链入ThreadPool->head */
 };
 
 struct ThreadPool {
-    AioContext *ctx;
-    QEMUBH *completion_bh;
+    AioContext *ctx;		/* 所属事件源 */
+    QEMUBH *completion_bh;	/* 线程完成后的下半部，指向thread_pool_completion_bh */
     QemuMutex lock;
-    QemuCond worker_stopped;
-    QemuSemaphore sem;
-    int max_threads;
-    QEMUBH *new_thread_bh;
+    QemuCond worker_stopped;	/* 等待线程结束的条件变量 */
+    QemuSemaphore sem;		/* 通知信号量 */
+    int max_threads;		/* 最大线程数量 */
+    QEMUBH *new_thread_bh;	/* 用于创建新线程的下半部，指向spawn_thread_bh_fn */
 
     /* The following variables are only accessed from one AioContext. */
-    QLIST_HEAD(, ThreadPoolElement) head;
+    /* 任务队列，只能在aio_context中访问，处理结果回调 */
+    QLIST_HEAD(, ThreadPoolElement) head;		
 
     /* The following variables are protected by lock.  */
-    QTAILQ_HEAD(, ThreadPoolElement) request_list;
-    int cur_threads;
-    int idle_threads;
+    /* 任务队列，在线程池线程和aio_context中访问，负责任务派发 */
+    QTAILQ_HEAD(, ThreadPoolElement) request_list;	
+    int cur_threads;	/* 当前线程数量 */
+    int idle_threads;	/* IDLE线程数量 */
     int new_threads;     /* backlog of threads we need to create */
     int pending_threads; /* threads created but not running yet */
-    bool stopping;
+    bool stopping;	/* 是否正在停止 */
 };
 
 static void *worker_thread(void *opaque)

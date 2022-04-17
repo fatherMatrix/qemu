@@ -166,6 +166,7 @@ int qemu_init_main_loop(Error **errp)
         return ret;
     }
 
+    /* 将上下文作为source */
     qemu_aio_context = aio_context_new(errp);
     if (!qemu_aio_context) {
         return -EMFILE;
@@ -173,10 +174,12 @@ int qemu_init_main_loop(Error **errp)
     qemu_set_current_aio_context(qemu_aio_context);
     qemu_notify_bh = qemu_bh_new(notify_event_cb, NULL);
     gpollfds = g_array_new(FALSE, FALSE, sizeof(GPollFD));
+    /* 处理aio context */
     src = aio_get_g_source(qemu_aio_context);
     g_source_set_name(src, "aio-context");
     g_source_attach(src, NULL);
     g_source_unref(src);
+    /* 处理io thread */
     src = iohandler_get_g_source();
     g_source_set_name(src, "io-handler");
     g_source_attach(src, NULL);
@@ -201,6 +204,11 @@ static void glib_pollfds_fill(int64_t *cur_timeout)
     int64_t timeout_ns;
     int n;
 
+    /*
+     * prepare
+     *
+     * 主要调用了source自定义的prepare方法，以确定是否可以准备好
+     */
     g_main_context_prepare(context, &max_priority);
 
     glib_pollfds_idx = gpollfds->len;
@@ -208,8 +216,14 @@ static void glib_pollfds_fill(int64_t *cur_timeout)
     do {
         GPollFD *pfds;
         glib_n_poll_fds = n;
+	/* gpollfds是一个全局变量 */
         g_array_set_size(gpollfds, glib_pollfds_idx + glib_n_poll_fds);
         pfds = &g_array_index(gpollfds, GPollFD, glib_pollfds_idx);
+	/*
+	 * query
+	 *
+	 * 主要是把需要poll的source的fd及相关信息放到pfds数组中
+	 */
         n = g_main_context_query(context, max_priority, &timeout, pfds,
                                  glib_n_poll_fds);
     } while (n != glib_n_poll_fds);
@@ -228,6 +242,9 @@ static void glib_pollfds_poll(void)
     GMainContext *context = g_main_context_default();
     GPollFD *pfds = &g_array_index(gpollfds, GPollFD, glib_pollfds_idx);
 
+    /*
+     * 大概就是依次调用了事件源自定义的check和dispatch方法
+     */
     if (g_main_context_check(context, max_priority, pfds, glib_n_poll_fds)) {
         g_main_context_dispatch(context);
     }
@@ -237,21 +254,47 @@ static void glib_pollfds_poll(void)
 
 static int os_host_main_loop_wait(int64_t timeout)
 {
+    /*
+     * main事件循环，全局变量，使用once机制生成一次
+     */
     GMainContext *context = g_main_context_default();
     int ret;
 
+    /*
+     * 成为context的owner，在执行prepare、query、check、dispatch之前必须为
+     * context的owner
+     */
     g_main_context_acquire(context);
 
+    /*
+     * 主要工作为获取所有需要监听的fd，并且计算一个最小的超时时间
+     * 
+     * 包含prepare和query两个过程
+     */
     glib_pollfds_fill(&timeout);
 
+    /* 释放Big Qemu Lock */
     qemu_mutex_unlock_iothread();
     replay_mutex_unlock();
 
+    /*
+     * 主要工作为监听文件上发生的事件。
+     *
+     * qemu_poll_ns的调用会阻塞主线程，当该函数返回后意味着出现了如下情况之一：
+     * 	1. 有文件fd上发生了事件
+     * 	2. 表示一个超时事件
+     */
     ret = qemu_poll_ns((GPollFD *)gpollfds->data, gpollfds->len, timeout);
 
+    /* 获取Big Qemu Lock */
     replay_mutex_lock();
     qemu_mutex_lock_iothread();
 
+    /*
+     * 主要工作为检测并分发事件。
+     *
+     * 包含check和dispatch两个过程
+     */
     glib_pollfds_poll();
 
     g_main_context_release(context);
@@ -524,10 +567,12 @@ void main_loop_wait(int nonblocking)
         timeout_ns = (uint64_t)mlpoll.timeout * (int64_t)(SCALE_MS);
     }
 
+    /* 计算一个最小的time_out时间 */
     timeout_ns = qemu_soonest_timeout(timeout_ns,
                                       timerlistgroup_deadline_ns(
                                           &main_loop_tlg));
 
+    /* 进入主事件循环 */
     ret = os_host_main_loop_wait(timeout_ns);
     mlpoll.state = ret < 0 ? MAIN_LOOP_POLL_ERR : MAIN_LOOP_POLL_OK;
     notifier_list_notify(&main_loop_poll_notifiers, &mlpoll);

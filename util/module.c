@@ -28,9 +28,9 @@
 
 typedef struct ModuleEntry
 {
-    void (*init)(void);
-    QTAILQ_ENTRY(ModuleEntry) node;
-    module_init_type type;
+    void (*init)(void);			/* 对应的注册函数，例如pci_edu_register_types */
+    QTAILQ_ENTRY(ModuleEntry) node;	/* 内嵌的链表节点 */
+    module_init_type type;		/* 类型对应的type，QOM只是init_type_list中的一大类 */
 } ModuleEntry;
 
 typedef QTAILQ_HEAD(, ModuleEntry) ModuleTypeList;
@@ -61,6 +61,7 @@ static void init_lists(void)
 
 static ModuleTypeList *find_type(module_init_type type)
 {
+    /* 仅初始化一次，内部使用static变量保证 */
     init_lists();
 
     return &init_type_list[type];
@@ -72,7 +73,7 @@ void register_module_init(void (*fn)(void), module_init_type type)
     ModuleTypeList *l;
 
     e = g_malloc0(sizeof(*e));
-    e->init = fn;
+    e->init = fn;		/* 这个就是pci_edu_register_types这类 */
     e->type = type;
 
     l = find_type(type);

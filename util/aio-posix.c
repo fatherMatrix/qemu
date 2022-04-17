@@ -95,6 +95,7 @@ void aio_set_fd_handler(AioContext *ctx,
                         AioPollFn *io_poll,
                         void *opaque)
 {
+    /* opaque是notifier，fd是notifier的文件描述符 */
     AioHandler *node;
     AioHandler *new_node = NULL;
     bool is_new = false;
@@ -103,6 +104,9 @@ void aio_set_fd_handler(AioContext *ctx,
 
     qemu_lockcnt_lock(&ctx->list_lock);
 
+    /*
+     * 查找context中是否已经有了此fd
+     */
     node = find_aio_handler(ctx, fd);
 
     /* Are we deleting the fd handler? */
@@ -378,6 +382,8 @@ static bool aio_dispatch_handlers(AioContext *ctx)
 void aio_dispatch(AioContext *ctx)
 {
     qemu_lockcnt_inc(&ctx->list_lock);
+
+    /* 先poll及call下半部 */
     aio_bh_poll(ctx);
     aio_dispatch_handlers(ctx);
     aio_free_deleted_handlers(ctx);

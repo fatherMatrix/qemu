@@ -128,15 +128,19 @@ typedef void (ObjectFree)(void *obj);
 struct ObjectClass
 {
     /* private: */
-    Type type;
+    Type type;	/* typedef TypeImpl * Type; */
+
+    /* Interface链表，其中每个元素是一个InterfaceClass的指针，即
+     * interfaces->data是一个指向InterfaceClass的指针
+     */
     GSList *interfaces;
 
     const char *object_cast_cache[OBJECT_CLASS_CAST_CACHE];
     const char *class_cast_cache[OBJECT_CLASS_CAST_CACHE];
 
-    ObjectUnparent *unparent;
+    ObjectUnparent *unparent;	/* 干嘛的？*/
 
-    GHashTable *properties;
+    GHashTable *properties;	/* name -> struct ObjectProperty的映射 */
 };
 
 /**
@@ -154,11 +158,11 @@ struct ObjectClass
 struct Object
 {
     /* private: */
-    ObjectClass *class;
-    ObjectFree *free;
-    GHashTable *properties;
-    uint32_t ref;
-    Object *parent;
+    ObjectClass *class;		/* ObjectX所属的ObjectClassX */
+    ObjectFree *free;		/* ObjectX所在内存的释放函数 */
+    GHashTable *properties;	/* name -> struct ObjectProperty的映射 */
+    uint32_t ref;		/* 引用计数 */
+    Object *parent;		/* parent ObjectX */
 };
 
 /**
@@ -415,19 +419,26 @@ struct TypeInfo
     const char *name;
     const char *parent;
 
-    size_t instance_size;
-    size_t instance_align;
-    void (*instance_init)(Object *obj);
-    void (*instance_post_init)(Object *obj);
-    void (*instance_finalize)(Object *obj);
+    size_t instance_size;					/* ObjectX所占用的内存大小 */
+    size_t instance_align;					/* ObjectX的内存对齐数值 */
+    void (*instance_init)(Object *obj);				/* ObjectX的初始化函数 */	
+    void (*instance_post_init)(Object *obj);	
+    void (*instance_finalize)(Object *obj);			/* ObjectX的析构函数 */
 
-    bool abstract;
-    size_t class_size;
+    bool abstract;						/* 是否是抽象类 */
+    size_t class_size;						/* ObjectClassX所占用的内存大小 */
 
-    void (*class_init)(ObjectClass *klass, void *data);
+    void (*class_init)(ObjectClass *klass, void *data);		/* ObjectClassX的初始化函数 */
+    /* 在执行了父class的class_init之后，自己的class_init之前执行，
+     * 用来解除memcpy的副作用
+     */
     void (*class_base_init)(ObjectClass *klass, void *data);
     void *class_data;
 
+    /* 这是一个static类型的数组，没有长度。
+     * 最后一个元素是0填充的，用来确定尾部位置。 
+     * 保存了接口的字符名称
+     */
     InterfaceInfo *interfaces;
 };
 
@@ -514,6 +525,10 @@ struct InterfaceInfo {
  */
 struct InterfaceClass
 {
+    /* InterfaceClass内嵌了一个ObjectClass?
+     * 对的，InterfaceClass与ObjectClass是平级的东西，这里只是重用了
+     * ObjectClass的代码而已，其代表Java中的接口，本质上也是一个Class
+     */
     ObjectClass parent_class;
     /* private: */
     ObjectClass *concrete_class;

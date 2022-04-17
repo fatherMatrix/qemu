@@ -74,6 +74,7 @@ static const int ide_irq[MAX_IDE_BUS] = { 14, 15 };
 static void pc_init1(MachineState *machine,
                      const char *host_type, const char *pci_type)
 {
+    /* PCMachineState -> X86MachineState -> MachineState */
     PCMachineState *pcms = PC_MACHINE(machine);
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
     X86MachineState *x86ms = X86_MACHINE(machine);
@@ -122,6 +123,10 @@ static void pc_init1(MachineState *machine,
      *    qemu -M pc -m 4G        (new default)    -> 3072M low, 1024M high
      *    qemu -M pc,max-ram-below-4g=2G -m 4G     -> 2048M low, 2048M high
      *    qemu -M pc,max-ram-below-4g=4G -m 3968M  -> 3968M low (=4G-128M)
+     */
+    /*
+     * 内存计算部分用于计算出计算机的高端内存和低端内存的分割点，主要是因为
+     * 需要在低于4GB左右的物理地址空间中保留一部分给PCI设备使用。
      */
     if (xen_enabled()) {
         xen_hvm_init_pc(pcms, &ram_memory);
@@ -387,6 +392,9 @@ static void pc_xen_hvm_init(MachineState *machine)
 }
 #endif
 
+/* 展开为一堆函数声明，最后"调用"了type_init()。
+ * 注意type_init()展开后也只不过是声明了一个在main()之前被调用的函数而已。
+ */
 #define DEFINE_I440FX_MACHINE(suffix, name, compatfn, optionfn) \
     static void pc_init_##suffix(MachineState *machine) \
     { \

@@ -249,7 +249,7 @@ struct AioContext {
     /* epoll(7) state used when built with CONFIG_EPOLL */
     int epollfd;
 
-    const FDMonOps *fdmon_ops;
+    const FDMonOps *fdmon_ops;	/* AioHandlers的update/wait/need_wait操作 */
 };
 
 /**
