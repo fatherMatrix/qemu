@@ -63,11 +63,19 @@ static int accel_init_machine(AccelClass *acc, MachineState *ms)
 {
     ObjectClass *oc = OBJECT_CLASS(acc);
     const char *cname = object_class_get_name(oc);
+    /* 
+     * 实际创建了KVMState结构体
+     *
+     * KVMState -> AccelState -> Object
+     * KVMState对应的ObjectClass对应的TypeInfo是kvm_accel_type
+     * kvm_accel_type.class_init对应的是kvm_accel_class_init
+     * kvm_accel_class_init中将init_machine设置为了kvm_init
+     */
     AccelState *accel = ACCEL(object_new(cname));
     int ret;
     ms->accelerator = accel;
     *(acc->allowed) = true;
-    ret = acc->init_machine(ms);
+    ret = acc->init_machine(ms);	/* 对应kvm_init() */	
     if (ret < 0) {
         ms->accelerator = NULL;
         *(acc->allowed) = false;
@@ -83,6 +91,7 @@ void configure_accelerator(MachineState *ms)
     int ret;
     bool accel_initialised = false;
     bool init_failed = false;
+    /* AccelClass -> ObjectClass */
     AccelClass *acc = NULL;
 
     p = qemu_opt_get(qemu_get_machine_opts(), "accel");

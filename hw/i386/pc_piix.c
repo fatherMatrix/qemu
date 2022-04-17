@@ -116,6 +116,9 @@ static void pc_init1(MachineState *machine,
      *    qemu -M pc,max-ram-below-4g=2G -m 4G     -> 2048M low, 2048M high
      *    qemu -M pc,max-ram-below-4g=4G -m 3968M  -> 3968M low (=4G-128M)
      */
+    /*
+     * 计算高端内存与低端内存的分割点
+     */
     if (xen_enabled()) {
         xen_hvm_init(pcms, &ram_memory);
     } else {
@@ -146,6 +149,7 @@ static void pc_init1(MachineState *machine,
         }
     }
 
+    /* 初始化vcpu */
     pc_cpus_init(pcms);
 
     if (kvm_enabled() && pcmc->kvmclock_enabled) {
@@ -433,6 +437,7 @@ static void pc_i440fx_machine_options(MachineClass *m)
     m->family = "pc_piix";
     m->desc = "Standard PC (i440FX + PIIX, 1996)";
     m->hot_add_cpu = pc_hot_add_cpu;
+    /* 设置qemu的启动固件为bios-256k.bin，对应SeaBios */
     m->default_machine_opts = "firmware=bios-256k.bin";
     m->default_display = "std";
 }

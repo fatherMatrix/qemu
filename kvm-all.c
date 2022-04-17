@@ -67,6 +67,7 @@ struct KVMParkedVcpu {
     QLIST_ENTRY(KVMParkedVcpu) node;
 };
 
+/* KVMState -> AccelState -> Object */
 struct KVMState
 {
     AccelState parent_obj;
@@ -317,6 +318,7 @@ int kvm_init_vcpu(CPUState *cpu)
     cpu->kvm_state = s;
     cpu->kvm_vcpu_dirty = true;
 
+    /* 对/dev/kvm设备文件进行ioctl操作 */
     mmap_size = kvm_ioctl(s, KVM_GET_VCPU_MMAP_SIZE, 0);
     if (mmap_size < 0) {
         ret = mmap_size;
@@ -1597,6 +1599,7 @@ static int kvm_init(MachineState *ms)
 #endif
     QLIST_INIT(&s->kvm_parked_vcpus);
     s->vmfd = -1;
+    /* 打开/dev/kvm设备文件 */
     s->fd = qemu_open("/dev/kvm", O_RDWR);
     if (s->fd == -1) {
         fprintf(stderr, "Could not access KVM kernel module: %m\n");
@@ -1657,6 +1660,7 @@ static int kvm_init(MachineState *ms)
     }
 
     do {
+        /* 执行创建虚拟机的ioctl */
         ret = kvm_ioctl(s, KVM_CREATE_VM, type);
     } while (ret == -EINTR);
 

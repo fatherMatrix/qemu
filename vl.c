@@ -3721,6 +3721,7 @@ int main(int argc, char **argv, char **envp)
                 }
                 break;
             case QEMU_OPTION_enable_kvm:
+		/* 当命令行加入--enable-kvm时，解析会进入下面的代码 */
                 olist = qemu_find_opts("machine");
                 qemu_opts_parse_noisily(olist, "accel=kvm", false);
                 break;
