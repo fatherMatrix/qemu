@@ -336,7 +336,7 @@ struct CPUState {
     AddressSpace *as;
     MemoryRegion *memory;
 
-    void *env_ptr; /* CPUArchState */
+    void *env_ptr; /* CPUArchState */ /* 这个指针指向自己派生出来的子ObjectX */
 
     /* Writes protected by tb_lock, reads not thread-safe  */
     struct TranslationBlock *tb_jmp_cache[TB_JMP_CACHE_SIZE];

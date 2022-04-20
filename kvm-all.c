@@ -297,6 +297,7 @@ static int kvm_get_vcpu(KVMState *s, unsigned long vcpu_id)
         }
     }
 
+    /* 创建vCPU */
     return kvm_vm_ioctl(s, KVM_CREATE_VCPU, (void *)vcpu_id);
 }
 
@@ -308,6 +309,7 @@ int kvm_init_vcpu(CPUState *cpu)
 
     DPRINTF("kvm_init_vcpu\n");
 
+    /* 在这里创建vCPU */
     ret = kvm_get_vcpu(s, kvm_arch_vcpu_id(cpu));
     if (ret < 0) {
         DPRINTF("kvm_create_vcpu failed\n");
@@ -1919,6 +1921,7 @@ int kvm_cpu_exec(CPUState *cpu)
             cpu->kvm_vcpu_dirty = false;
         }
 
+	/* 做一些运行前的准备工作，如nmi和smi的中断注入 */
         kvm_arch_pre_run(cpu, run);
         if (cpu->exit_request) {
             DPRINTF("interrupt exit requested\n");
@@ -1930,6 +1933,11 @@ int kvm_cpu_exec(CPUState *cpu)
             qemu_cpu_kick_self();
         }
 
+	/*
+	 * 将该vCPU运行起来 
+	 *
+	 * 当虚拟机产生了VM_EXIT事件，且kvm无法处置时，这里才会返回
+	 */
         run_ret = kvm_vcpu_ioctl(cpu, KVM_RUN, 0);
 
         attrs = kvm_arch_post_run(cpu, run);

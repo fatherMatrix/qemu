@@ -968,6 +968,7 @@ static void qemu_kvm_wait_io_event(CPUState *cpu)
     qemu_wait_io_event_common(cpu);
 }
 
+/* vCPU线程运行的函数 */
 static void *qemu_kvm_cpu_thread_fn(void *arg)
 {
     CPUState *cpu = arg;
@@ -1000,6 +1001,10 @@ static void *qemu_kvm_cpu_thread_fn(void *arg)
                 cpu_handle_guest_debug(cpu);
             }
         }
+	/* 
+	 * 这里会被 main->vm_start->resume_all_vcpus->cpu_resume->
+	 * qemu_cpu_kick->qemu_cond_broadcast 唤醒
+	 */
         qemu_kvm_wait_io_event(cpu);
     } while (!cpu->unplug || cpu_can_run(cpu));
 

@@ -3729,6 +3729,7 @@ static void x86_cpu_common_class_init(ObjectClass *oc, void *data)
     dc->cannot_instantiate_with_device_add_yet = false;
 }
 
+/* 对应TYPE_X86_CPU */
 static const TypeInfo x86_cpu_type_info = {
     .name = TYPE_X86_CPU,
     .parent = TYPE_CPU,
@@ -3744,10 +3745,16 @@ static void x86_cpu_register_types(void)
     int i;
 
     type_register_static(&x86_cpu_type_info);
+    /*
+     * builtin_x86_defs是一个全局数组，元素类型为X86CPUDefinnition,定义了各类
+     * x86架构的CPU模型，函数x86_register_cpudef_type()从数组元素中构造出
+     * TypeInfo，然后将其注册进QOM
+     */
     for (i = 0; i < ARRAY_SIZE(builtin_x86_defs); i++) {
         x86_register_cpudef_type(&builtin_x86_defs[i]);
     }
 #ifdef CONFIG_KVM
+    /* host_x86_cpu_type_info是与宿主机上CPU的feature一致 */
     type_register_static(&host_x86_cpu_type_info);
 #endif
 }
