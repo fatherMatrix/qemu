@@ -362,7 +362,13 @@ static int kvm_set_user_memory_region(KVMMemoryListener *kml, KVMSlot *slot, boo
     int ret;
 
     mem.slot = slot->slot | (kml->as_id << 16);
+    /*
+     * 虚拟机的物理地址
+     */
     mem.guest_phys_addr = slot->start_addr;
+    /*
+     * 对应的QEMU进程虚拟地址
+     */
     mem.userspace_addr = (unsigned long)slot->ram;
     mem.flags = slot->flags;
 
@@ -376,6 +382,9 @@ static int kvm_set_user_memory_region(KVMMemoryListener *kml, KVMSlot *slot, boo
         }
     }
     mem.memory_size = slot->memory_size;
+    /*
+     * 进入kvm模块
+     */
     ret = kvm_vm_ioctl(s, KVM_SET_USER_MEMORY_REGION, &mem);
     slot->old_flags = mem.flags;
 err:
@@ -1347,6 +1356,11 @@ static void kvm_set_phys_mem(KVMMemoryListener *kml,
     int err;
     MemoryRegion *mr = section->mr;
     bool writeable = !mr->readonly && !mr->rom_device;
+    /*
+     * start_addr表示虚拟机的物理地址
+     * size表示其大小
+     * ram为在虚拟机内存中对应的QEMU虚拟地址空间的虚拟地址
+     */
     hwaddr start_addr, size, slot_size, mr_offset;
     ram_addr_t ram_start_offset;
     void *ram;

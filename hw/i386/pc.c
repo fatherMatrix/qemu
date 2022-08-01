@@ -820,10 +820,19 @@ void pc_memory_init(PCMachineState *pcms,
      * done for backwards compatibility with older qemus.
      */
     *ram_memory = machine->ram;
+    /*
+     * 创建并初始化一个ram_below_4g的内存区域
+     */
     ram_below_4g = g_malloc(sizeof(*ram_below_4g));
     memory_region_init_alias(ram_below_4g, NULL, "ram-below-4g", machine->ram,
                              0, x86ms->below_4g_mem_size);
+    /*
+     * 将其设置为pc.ram的子区域
+     */
     memory_region_add_subregion(system_memory, 0, ram_below_4g);
+    /*
+     * 将小于4GB的内存加入到e820表中供BIOS使用
+     */
     e820_add_entry(0, x86ms->below_4g_mem_size, E820_RAM);
     if (x86ms->above_4g_mem_size > 0) {
         ram_above_4g = g_malloc(sizeof(*ram_above_4g));
@@ -833,6 +842,11 @@ void pc_memory_init(PCMachineState *pcms,
                                  x86ms->above_4g_mem_size);
         memory_region_add_subregion(system_memory, 0x100000000ULL,
                                     ram_above_4g);
+	/*
+	 * 将大于4GB的内存区域其加入e820表
+	 *
+	 * 为什么要区分开呢？
+	 */
         e820_add_entry(0x100000000ULL, x86ms->above_4g_mem_size, E820_RAM);
     }
 

@@ -215,18 +215,28 @@ struct DeviceListener {
 #define TYPE_BUS "bus"
 DECLARE_OBJ_CHECKERS(BusState, BusClass,
                      BUS, TYPE_BUS)
-
+/*
+ * 对应的Object是BusState
+ */
 struct BusClass {
     ObjectClass parent_class;
 
     /* FIXME first arg should be BusState */
+    /*
+     * 打印总线上的一个设备
+     */
     void (*print_dev)(Monitor *mon, DeviceState *dev, int indent);
+    /*
+     * 得到设备路径
+     */
     char *(*get_dev_path)(DeviceState *dev);
 
     /*
      * This callback is used to create Open Firmware device path in accordance
      * with OF spec http://forthworks.com/standards/of1275.pdf. Individual bus
      * bindings can be found at http://playground.sun.com/1275/bindings/.
+     *
+     * 得到设备在firmware中的路径
      */
     char *(*get_fw_dev_path)(DeviceState *dev);
 
@@ -240,7 +250,13 @@ struct BusClass {
      */
     bool (*check_address)(BusState *bus, DeviceState *dev, Error **errp);
 
+    /*
+     * 表示Bus进行realize时的回调函数
+     */
     BusRealize realize;
+    /*
+     * 表示Bus进行unrealize时的回调函数
+     */
     BusUnrealize unrealize;
 
     /* maximum devices allowed on the bus, 0: no limit. */
@@ -265,9 +281,21 @@ typedef struct BusChild {
  */
 struct BusState {
     Object obj;
+    /*
+     * 表示总线所在的设备，因为总线不能独立产生，必须依赖于一个设备。如PCI总线
+     * 是由PCI桥产生的，USB总线是由USB控制器产生的，SCSI总线是由SCSI控制器产生
+     * 的，这里的parent即表示总线的父设备
+     */
     DeviceState *parent;
     char *name;
+    /*
+     * 指向一个处理热插拔的处理器，因为很多总线允许设备热插拔，这个结构就是用来
+     * 完成热插拔处理的
+     */
     HotplugHandler *hotplug_handler;
+    /*
+     * 表示插在该总线上的设备个数
+     */
     int max_index;
     bool realized;
     bool full;
@@ -277,8 +305,13 @@ struct BusState {
      * children is a RCU QTAILQ, thus readers must use RCU to access it,
      * and writers must hold the big qemu lock
      */
-
+    /*
+     * 用来表示连接在该总线上的所有设备
+     */
     QTAILQ_HEAD(, BusChild) children;
+    /*
+     * 用来链接处于同一条总线上的设备
+     */
     QLIST_ENTRY(BusState) sibling;
     ResettableState reset;
 };

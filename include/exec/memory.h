@@ -732,11 +732,21 @@ struct MemoryRegion {
     bool flush_coalesced_mmio;
     uint8_t dirty_log_mask;
     bool is_iommu;
+    /*
+     * 实际分配的物理内存
+     */
     RAMBlock *ram_block;
     Object *owner;
 
+    /*
+     * 回调函数，在对MemoryRegion操作时会被调用。
+     * 如MMIO的读写请求
+     */
     const MemoryRegionOps *ops;
     void *opaque;
+    /*
+     * 该MemoryRegion所处的上一级MemoryRegion
+     */
     MemoryRegion *container;
     Int128 size;
     hwaddr addr;
@@ -1034,14 +1044,23 @@ struct AddressSpace {
     /* private: */
     struct rcu_head rcu;
     char *name;
+    /*
+     * 以树形式组织的内存信息
+     */
     MemoryRegion *root;
 
-    /* Accessed via RCU.  */
+    /* Accessed via RCU.  
+     *
+     * AddressSpace对应的平坦视角
+     */
     struct FlatView *current_map;
 
     int ioeventfd_nb;
     struct MemoryRegionIoeventfd *ioeventfds;
     QTAILQ_HEAD(, MemoryListener) listeners;
+    /*
+     * 所有AddressSpace通过address_spaces_link连接起来，链表头是address_spaces
+     */
     QTAILQ_ENTRY(AddressSpace) address_spaces_link;
 };
 
@@ -1054,8 +1073,16 @@ typedef struct FlatRange FlatRange;
 struct FlatView {
     struct rcu_head rcu;
     unsigned ref;
+    /*
+     * 每一个FlatRange表示一段AddressSpace中的一段空间，即对应MemoryRegion
+     *
+     * 是一个数组，数组元素的个数由nr控制
+     */
     FlatRange *ranges;
     unsigned nr;
+    /*
+     * nr_allocated表示已经分配的FlatRange个数
+     */
     unsigned nr_allocated;
     struct AddressSpaceDispatch *dispatch;
     MemoryRegion *root;

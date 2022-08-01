@@ -120,14 +120,32 @@ typedef struct PhysPageMap {
     unsigned sections_nb_alloc;
     unsigned nodes_nb;
     unsigned nodes_nb_alloc;
+    /*
+     * 类似于MMU中的页表项
+     *
+     * 定义512个PhysPageEntry
+     */
     Node *nodes;
+    /*
+     * 类似于MMU中的page
+     *
+     * sections中存放着该AddressSpace所有的MemoryRegionSection，section_nb表示
+     * sections所指向的动态数组中的有效个数，section_nb_alloc表示section总共分
+     * 配的个数。
+     */
     MemoryRegionSection *sections;
 } PhysPageMap;
 
 struct AddressSpaceDispatch {
+    /*
+     * 作为一个缓存，保存最后一次找到的MemoryRegionSection，由于程序局部性的原
+     * 理，可以提高程序效率
+     */
     MemoryRegionSection *mru_section;
     /* This is a multi-level map on the physical address space.
      * The bottom level has pointers to MemoryRegionSections.
+     *
+     * 类似于MMU中的CR3
      */
     PhysPageEntry phys_map;
     PhysPageMap map;
@@ -3066,7 +3084,13 @@ void cpu_exec_init_all(void)
      * up front what their requirements are.
      */
     finalize_target_page_bits();
+    /*
+     * 创建若干个包含所有地址空间的MemoryRegion
+     */
     io_mem_init();
+    /*
+     * 创建两个AddressSpace: address_space_memory和address_space_io
+     */
     memory_map_init();
     qemu_mutex_init(&map_client_list_lock);
 }

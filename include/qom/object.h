@@ -138,7 +138,7 @@ struct ObjectClass
     const char *object_cast_cache[OBJECT_CLASS_CAST_CACHE];
     const char *class_cast_cache[OBJECT_CLASS_CAST_CACHE];
 
-    ObjectUnparent *unparent;	/* 干嘛的？*/
+    ObjectUnparent *unparent;	/* 干嘛的？取消这个类时用的 */
 
     GHashTable *properties;	/* name -> struct ObjectProperty的映射 */
 };

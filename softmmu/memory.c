@@ -150,7 +150,12 @@ enum ListenerDirection { Forward, Reverse };
         }                                                               \
     } while (0)
 
-/* No need to ref/unref .mr, the FlatRange keeps it alive.  */
+/* No need to ref/unref .mr, the FlatRange keeps it alive.
+ *
+ * 1. 先根据FlatRange创建一个MemoryRegion Section
+ * 2. 调用MEMORY_LISTENER_CALL宏，该宏根据顺序还是逆序调用MemoryListener
+ *    相应的函数
+ */
 #define MEMORY_LISTENER_UPDATE_REGION(fr, as, dir, callback, _args...)  \
     do {                                                                \
         MemoryRegionSection mrs = section_from_flat_range(fr,           \
@@ -216,8 +221,17 @@ static bool memory_region_ioeventfd_equal(MemoryRegionIoeventfd *a,
 
 /* Range of memory in the global map.  Addresses are absolute. */
 struct FlatRange {
+    /*
+     * 指向对应的MemoryRegion
+     */
     MemoryRegion *mr;
+    /*
+     * 表示该FlatRange在MemoryRange中的偏移
+     */
     hwaddr offset_in_region;
+    /*
+     * 表示地址和大小
+     */
     AddrRange addr;
     uint8_t dirty_log_mask;
     bool romd_mode;
@@ -724,7 +738,11 @@ static MemoryRegion *memory_region_get_flatview_root(MemoryRegion *mr)
     return NULL;
 }
 
-/* Render a memory topology into a list of disjoint absolute ranges. */
+/* 
+ * Render a memory topology into a list of disjoint absolute ranges. 
+ *
+ * 将一个MemoryRegion平坦化展开为FlatView
+ */
 static FlatView *generate_memory_topology(MemoryRegion *mr)
 {
     int i;
@@ -733,10 +751,16 @@ static FlatView *generate_memory_topology(MemoryRegion *mr)
     view = flatview_new(mr);
 
     if (mr) {
+	/*
+	 * 递归调用MemoryRegion中的子Region，将其都添加到FlatView中
+	 */
         render_memory_region(view, mr, int128_zero(),
                              addrrange_make(int128_zero(), int128_2_64()),
                              false, false);
     }
+    /*
+     * 合并FlatView中可以合并的FlatRegion
+     */
     flatview_simplify(view);
 
     view->dispatch = address_space_dispatch_new(view);
