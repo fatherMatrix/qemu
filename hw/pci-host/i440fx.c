@@ -247,6 +247,11 @@ PCIBus *i440fx_init(const char *host_type, const char *pci_type,
                     MemoryRegion *pci_address_space,
                     MemoryRegion *ram_memory)
 {
+    /*
+     * i440fx_init首先创建最重要的北桥芯片，也叫主桥。与主桥有关的参数是
+     * host_type和pci_type，前者指定了主桥的设备类型名字，后者指定了主桥对应在
+     * PCI根总线上的设备名字
+     */
     DeviceState *dev;
     PCIBus *b;
     PCIDevice *d;
@@ -255,14 +260,36 @@ PCIBus *i440fx_init(const char *host_type, const char *pci_type,
     unsigned i;
     I440FXState *i440fx;
 
+    /*
+     * host_type为TYPE_I440FX_PCI_HOST_BRIDGE(-> TYPE_PCI_HOST_BRIDGE -> TYPE_S
+     * YS_BUS_DEVICE -> TYPE_DEVICE)
+     *
+     * 创建北桥，即PCI Host
+     */
     dev = qdev_new(host_type);
     s = PCI_HOST_BRIDGE(dev);
+    /*
+     * 创建PCI根总线，即0号总线
+     */
     b = pci_root_bus_new(dev, NULL, pci_address_space,
                          address_space_io, 0, TYPE_PCI_BUS);
     s->bus = b;
+    /*
+     * 将PCI Host加入到machine的属性中
+     */
     object_property_add_child(qdev_get_machine(), "i440fx", OBJECT(dev));
+    /*
+     * 将PCI Host挂到sysbus上
+     */
     sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
 
+    /* 
+     * pci_type为TYPE_I440FX_PCI_DEVICE。其实在物理上pci_type和host_type都处于
+     * 同一个芯片组中的，这里将他们两个分开，用pci_type抽象出物理北桥上隶属于
+     * PCI总线的部分。
+     *
+     * 这是在PCI根总线的0号槽创建的，与物理拓扑相同。
+     */
     d = pci_create_simple(b, 0, pci_type);
     *pi440fx_state = I440FX_PCI_DEVICE(d);
     f = *pi440fx_state;

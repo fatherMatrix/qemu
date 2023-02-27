@@ -123,8 +123,8 @@ static void pc_init1(MachineState *machine,
      *    qemu -M pc -m 4G        (new default)    -> 3072M low, 1024M high
      *    qemu -M pc,max-ram-below-4g=2G -m 4G     -> 2048M low, 2048M high
      *    qemu -M pc,max-ram-below-4g=4G -m 3968M  -> 3968M low (=4G-128M)
-     */
-    /*
+     *
+     *
      * 内存计算部分用于计算出计算机的高端内存和低端内存的分割点，主要是因为
      * 需要在低于4GB左右的物理地址空间中保留一部分给PCI设备使用。
      */
@@ -159,6 +159,9 @@ static void pc_init1(MachineState *machine,
     }
 
     pc_machine_init_sgx_epc(pcms);
+    /*
+     * 初始化cpu
+     */
     x86_cpus_init(x86ms, pcmc->default_cpu_version);
 
     if (pcmc->kvmclock_enabled) {
@@ -202,6 +205,9 @@ static void pc_init1(MachineState *machine,
     if (pcmc->pci_enabled) {
         PIIX3State *piix3;
 
+	/*
+	 * i440fx_init进行主板的初始化
+	 */
         pci_bus = i440fx_init(host_type,
                               pci_type,
                               &i440fx_state,

@@ -80,6 +80,9 @@ static Type type_interface;
 
 static GHashTable *type_table_get(void)
 {
+    /*
+     * type_table存在于全局数据段中
+     */
     static GHashTable *type_table;
 
     if (type_table == NULL) {
