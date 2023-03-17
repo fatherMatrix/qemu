@@ -116,6 +116,9 @@ static void kvm_pic_set_irq(void *opaque, int irq, int level)
     int delivered;
 
     pic_stat_update_irq(irq, level);
+    /*
+     * 通过ioctl通知内核的kvm模块进行中断分发
+     */
     delivered = kvm_set_irq(kvm_state, irq, level);
     apic_report_irq_delivered(delivered);
 }

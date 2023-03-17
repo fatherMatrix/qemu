@@ -135,6 +135,10 @@ struct KVMState
     unsigned int sigmask_len;
     GHashTable *gsimap;
 #ifdef KVM_CAP_IRQ_ROUTING
+    /*
+     * 在qemu层次保存中断路由表，最终会通过kvm_irqchip_commit_routes将其提交到
+     * kvm层次；
+     */
     struct kvm_irq_routing *irq_routes;
     int nr_allocated_irq_routes;
     unsigned long *used_gsi_bitmap;

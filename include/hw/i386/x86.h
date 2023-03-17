@@ -50,6 +50,9 @@ struct X86MachineState {
     /* Pointers to devices and objects: */
     ISADevice *rtc;
     FWCfgState *fw_cfg;
+    /*
+     * 包含了IRQState
+     */
     qemu_irq *gsi;
     DeviceState *ioapic2;
     GMappedFile *initrd_mapped_file;

@@ -200,8 +200,15 @@ static void pc_init1(MachineState *machine,
         }
     }
 
+    /*
+     * gsi_state中包含了PIC和IO APIC两个芯片的中断信息。对于在kvm中模拟的中断控
+     * 制器，这个gsi_state只是起到一个包裹作用，通过ioctl转交给kvm处理。
+     */
     gsi_state = pc_gsi_create(&x86ms->gsi, pcmc->pci_enabled);
 
+    /*
+     * 如果使能了PCI
+     */
     if (pcmc->pci_enabled) {
         PIIX3State *piix3;
 
@@ -217,6 +224,9 @@ static void pc_init1(MachineState *machine,
                               pci_memory, ram_memory);
         pcms->bus = pci_bus;
 
+        /*
+         * 南桥初始化
+         */
         piix3 = piix3_create(pci_bus, &isa_bus);
         piix3->pic = x86ms->gsi;
         piix3_devfn = piix3->dev.devfn;
@@ -231,6 +241,9 @@ static void pc_init1(MachineState *machine,
 
     pc_i8259_create(isa_bus, gsi_state->i8259_irq);
 
+    /*
+     * 如果使能了PCI，则会调用ioapic_init_gsi函数初始化QEMU层次的IOAPIC设备
+     */
     if (pcmc->pci_enabled) {
         ioapic_init_gsi(gsi_state, "i440fx");
     }

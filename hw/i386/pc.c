@@ -376,9 +376,15 @@ GSIState *pc_gsi_create(qemu_irq **irqs, bool pci_enabled)
     GSIState *s;
 
     s = g_new0(GSIState, 1);
+    /*
+     * 如果是在内核中模拟IOAPIC，则开始设置中断路由信息
+     */
     if (kvm_ioapic_in_kernel()) {
         kvm_pc_setup_irq_routing(pci_enabled);
     }
+    /*
+     * 分配一组qemu_irq
+     */
     *irqs = qemu_allocate_irqs(gsi_handler, s, GSI_NUM_PINS);
 
     return s;

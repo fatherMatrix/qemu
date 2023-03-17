@@ -29,6 +29,12 @@ void kvm_pc_setup_irq_routing(bool pci_enabled)
         if (i == 2) {
             continue;
         }
+	/*
+	 * 单个的中断路由项是通过kvm_irqchip_add_irq_route函数添加的，
+	 * kvm_irqchip_add_irq_route函数调用kvm_add_routing_entry将中断路由信息
+	 * 加入到KVMState结构体的irq_routes中。最终通过
+	 * kvm_irq_chip_commit_routes将中断路由信息传递到kvm中
+	 */
         kvm_irqchip_add_irq_route(s, i, KVM_IRQCHIP_PIC_MASTER, i);
     }
     for (i = 8; i < 16; ++i) {
