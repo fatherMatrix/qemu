@@ -143,10 +143,22 @@ struct DeviceClass {
 
 typedef struct NamedGPIOList NamedGPIOList;
 
+/*
+ * 该结构体用来表示通用的input/output引脚
+ */
 struct NamedGPIOList {
     char *name;
+    /*
+     * 每个引脚的handler
+     */
     qemu_irq *in;
+    /*
+     * input pin的数目
+     */
     int num_in;
+    /*
+     * output pin的数目
+     */
     int num_out;
     QLIST_ENTRY(NamedGPIOList) node;
 };

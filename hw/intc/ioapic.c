@@ -120,6 +120,10 @@ static void ioapic_service(IOAPICCommonState *s)
                 }
 
 #ifdef CONFIG_KVM
+                /*
+                 * 如果lapic在kernel中，则调用ioctl(KVM_IRQ_LINE)将中断转交给内
+                 * 核中的kvm处理；
+                 */
                 if (kvm_irqchip_is_split()) {
                     if (info.trig_mode == IOAPIC_TRIGGER_EDGE) {
                         kvm_set_irq(kvm_state, i, 1);
@@ -130,6 +134,11 @@ static void ioapic_service(IOAPICCommonState *s)
                     continue;
                 }
 #endif
+
+                /*
+                 * 走到这里说明lapic是在qemu中的，直接转化为msi；后面的机制还不
+                 * 太清楚，有空再看；
+                 */
 
                 /* No matter whether IR is enabled, we translate
                  * the IOAPIC message into a MSI one, and its
@@ -202,6 +211,11 @@ static void ioapic_update_kvm_routes(IOAPICCommonState *s)
             if (!info.masked) {
                 msg.address = info.addr;
                 msg.data = info.data;
+		/*
+		 * 此时IOAPIC在qemu模拟，所以将kvm中的中断路由表全部设置为msi模
+		 * 式；如此，进入到kvm后不再需要IOAPIC参与，直接将中断信息发向
+		 * LAPIC即可；这不巧了吗，运气不错；
+		 */
                 kvm_irqchip_update_msi_route(kvm_state, i, msg, NULL);
             }
         }

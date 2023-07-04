@@ -74,6 +74,10 @@ static const int ide_irq[MAX_IDE_BUS] = { 14, 15 };
 static void pc_init1(MachineState *machine,
                      const char *host_type, const char *pci_type)
 {
+    /* 
+     * host_type是TYPE_I440FX_PCI_HOST_BRIDGE;
+     * pci_type是TYPE_I440FX_PCI_DEVICE;
+     */
     /* PCMachineState -> X86MachineState -> MachineState */
     PCMachineState *pcms = PC_MACHINE(machine);
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
@@ -239,6 +243,9 @@ static void pc_init1(MachineState *machine,
     }
     isa_bus_irqs(isa_bus, x86ms->gsi);
 
+    /*
+     * 初始化QEMU层次的PIC设备
+     */
     pc_i8259_create(isa_bus, gsi_state->i8259_irq);
 
     /*

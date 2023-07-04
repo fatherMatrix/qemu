@@ -32,6 +32,9 @@ DECLARE_INSTANCE_CHECKER(struct IRQState, IRQ,
 struct IRQState {
     Object parent_obj;
 
+    /*
+     * 回调函数
+     */
     qemu_irq_handler handler;
     void *opaque;
     int n;
@@ -42,6 +45,25 @@ void qemu_set_irq(qemu_irq irq, int level)
     if (!irq)
         return;
 
+    /*
+     * 这里是gsi_handler，pic_set_irq或者pic_irq_request，或者...
+     *
+     *      ^ 
+     *      | pic_irq_request
+     *      |
+     * +--------+
+     * | master |
+     * +--------+
+     *      ^
+     *      | pic_set_irq
+     *      |
+     *  +-------+
+     *  | slave |
+     *  +-------+
+     *    ^ ^ ^
+     *    | | | pic_set_irq
+     *    | | |
+     */
     irq->handler(irq->opaque, irq->n, level);
 }
 

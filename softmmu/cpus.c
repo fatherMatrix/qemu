@@ -245,8 +245,14 @@ static void generic_handle_interrupt(CPUState *cpu, int mask)
 void cpu_interrupt(CPUState *cpu, int mask)
 {
     if (cpus_accel->handle_interrupt) {
+        /*
+         * tcg虚拟化走这里
+         */
         cpus_accel->handle_interrupt(cpu, mask);
     } else {
+        /*
+         * kvm虚拟化走这里
+         */
         generic_handle_interrupt(cpu, mask);
     }
 }
@@ -440,6 +446,12 @@ void cpus_kick_thread(CPUState *cpu)
         return;
     }
     cpu->thread_kicked = true;
+    /*
+     * kvm_init_cpu_signals
+     *   IPI: kvm_ipi_signal      // 该信号处理函数在目标vcpu线程运行
+     *          kvm_cpu_kick
+     *            qatomic_set(kvm_run->immediate_exit) // kvm_run是mmap出来的vcpu状态
+     */
     err = pthread_kill(cpu->thread->thread, SIG_IPI);
     if (err && err != ESRCH) {
         fprintf(stderr, "qemu:%s: %s", __func__, strerror(err));
@@ -454,6 +466,9 @@ void qemu_cpu_kick(CPUState *cpu)
     if (cpus_accel->kick_vcpu_thread) {
         cpus_accel->kick_vcpu_thread(cpu);
     } else { /* default */
+        /*
+         * kvm走这里
+         */
         cpus_kick_thread(cpu);
     }
 }

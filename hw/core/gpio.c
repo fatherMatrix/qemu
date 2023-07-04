@@ -22,6 +22,9 @@
 #include "hw/irq.h"
 #include "qapi/error.h"
 
+/*
+ * 创建并返回
+ */
 static NamedGPIOList *qdev_get_named_gpio_list(DeviceState *dev,
                                                const char *name)
 {
@@ -103,8 +106,14 @@ void qdev_init_gpio_out(DeviceState *dev, qemu_irq *pins, int n)
 
 qemu_irq qdev_get_gpio_in_named(DeviceState *dev, const char *name, int n)
 {
+    /*
+     * 这里有可能是新创建的
+     */
     NamedGPIOList *gpio_list = qdev_get_named_gpio_list(dev, name);
 
+    /*
+     * 如果是新创建的话，这里肯定会报错的啊?
+     */
     assert(n >= 0 && n < gpio_list->num_in);
     return gpio_list->in[n];
 }

@@ -1757,6 +1757,9 @@ void kvm_init_irq_routing(KVMState *s)
         }
     }
 
+    /*
+     * 对于split模式，这里直接把内核的中断路由表设置为msi表项
+     */
     kvm_arch_init_irq_routing(s);
 }
 
@@ -2268,12 +2271,21 @@ static void kvm_irqchip_create(KVMState *s)
 
     /* First probe and see if there's a arch-specific hook to create the
      * in-kernel irqchip for us */
+    /*
+     * 对x86来说，这里就是检查一下内核是否支持IRQCHIP_SPLIT模式；
+     * - 如果支持，返回1，不在走入下面的if语句；
+     */
     ret = kvm_arch_irqchip_create(s);
     if (ret == 0) {
         if (s->kernel_irqchip_split == ON_OFF_AUTO_ON) {
             perror("Split IRQ chip mode not supported.");
             exit(1);
         } else {
+            /*
+             * 如果不走到这里，比如x86 split模式，这里会被略过；哪里再调用呢？
+             * - KVM_CREATE_IRQCHIP本来就不应该在kvm中再创建ioapic呀，只在qemu
+             *   有就可以了；所以就直接略过；
+             */
             ret = kvm_vm_ioctl(s, KVM_CREATE_IRQCHIP);
         }
     }
@@ -2620,6 +2632,10 @@ static int kvm_init(MachineState *ms)
 
     qemu_register_reset(kvm_unpoison_all, NULL);
 
+    /*
+     * 参见kvm_accel_class_init->kvm_set_kernel_irqchip：
+     * - 对于SPLIT模式，kernel_irqchip_allowed = true;
+     */
     if (s->kernel_irqchip_allowed) {
         kvm_irqchip_create(s);
     }
@@ -2807,6 +2823,9 @@ static __thread bool have_sigbus_pending;
 
 static void kvm_cpu_kick(CPUState *cpu)
 {
+    /*
+     * kvm_run是从kvm中mmap出来的
+     */
     qatomic_set(&cpu->kvm_run->immediate_exit, 1);
 }
 
@@ -3415,10 +3434,23 @@ void kvm_init_cpu_signals(CPUState *cpu)
     sigdelset(&set, SIGBUS);
     pthread_sigmask(SIG_SETMASK, &set, NULL);
 #endif
+    /*
+     * 将SIG_IPI在set中删除；
+     */
     sigdelset(&set, SIG_IPI);
+    /*
+     * 如果开启了KVM_CAP_IMMEDIATE_EXIT，对IPI信号的处理有些不太一样；
+     * - 算是个小的加速优化吧；
+     */
     if (kvm_immediate_exit) {
+        /*
+         * 屏蔽除SIG_IPI外的所有信号；
+         */
         r = pthread_sigmask(SIG_SETMASK, &set, NULL);
     } else {
+        /*
+         * 这里本质上也是屏蔽除SIG_IPI外的所有信号；
+         */
         r = kvm_set_signal_mask(cpu, &set);
     }
     if (r) {

@@ -36,6 +36,11 @@ int accel_init_machine(AccelState *accel, MachineState *ms)
     int ret;
     ms->accelerator = accel;
     *(acc->allowed) = true;
+    /*
+     * TYPE_KVM_ACCEL
+     * kvm_accel_class_init
+     *   init_machine = kvm_init
+     */
     ret = acc->init_machine(ms);
     if (ret < 0) {
         ms->accelerator = NULL;

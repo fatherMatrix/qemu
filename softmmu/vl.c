@@ -2139,6 +2139,9 @@ static void set_memory_options(MachineClass *mc)
 
 static void qemu_create_machine(QDict *qdict)
 {
+    /*
+     * 选取对应的MachineClass，比如I440FX
+     */
     MachineClass *machine_class = select_machine(qdict, &error_fatal);
     object_set_machine_compat_props(machine_class->compat_props);
 
@@ -2412,6 +2415,9 @@ static void configure_accelerators(const char *progname)
         }
     }
 
+    /*
+     * 尝试每一个硬件辅助虚拟化，直到成功了一次
+     */
     if (!qemu_opts_foreach(qemu_find_opts("accel"),
                            do_configure_accelerator, &init_failed, &error_fatal)) {
         if (!init_failed) {
@@ -3772,6 +3778,9 @@ void qemu_init(int argc, char **argv, char **envp)
         exit(0);
     }
 
+    /*
+     * 这里面会调用current_machine的init函数
+     */
     if (!preconfig_requested) {
         qmp_x_exit_preconfig(&error_fatal);
     }

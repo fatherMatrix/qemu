@@ -377,13 +377,15 @@ GSIState *pc_gsi_create(qemu_irq **irqs, bool pci_enabled)
 
     s = g_new0(GSIState, 1);
     /*
-     * 如果是在内核中模拟IOAPIC，则开始设置中断路由信息
+     * 如果是在内核中模拟IOAPIC，则开始设置中断路由信息;
+     * 但是，kvm中如果发现了是ioapic in kernel，则会设置一组默认的中断重定向表
      */
     if (kvm_ioapic_in_kernel()) {
         kvm_pc_setup_irq_routing(pci_enabled);
     }
     /*
-     * 分配一组qemu_irq
+     * 分配一组qemu_irq，其中的handler都设置为gsi_handler，gsi_handler负责调用
+     * GSIState的handler回调；
      */
     *irqs = qemu_allocate_irqs(gsi_handler, s, GSI_NUM_PINS);
 
@@ -1171,10 +1173,16 @@ void pc_i8259_create(ISABus *isa_bus, qemu_irq *i8259_irqs)
     qemu_irq *i8259;
 
     if (kvm_pic_in_kernel()) {
+	/*
+	 * kvm来模拟中断控制器
+	 */
         i8259 = kvm_i8259_init(isa_bus);
     } else if (xen_enabled()) {
         i8259 = xen_interrupt_controller_init();
     } else {
+	/*
+	 * qemu来模拟中断控制器
+	 */
         i8259 = i8259_init(isa_bus, x86_allocate_cpu_irq());
     }
 

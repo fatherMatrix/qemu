@@ -4354,13 +4354,23 @@ void kvm_arch_pre_run(CPUState *cpu, struct kvm_run *run)
         }
     }
 
+    /*
+     * 如果pic是在qemu中模拟的；
+     */
     if (!kvm_pic_in_kernel()) {
         /* Try to inject an interrupt if the guest can accept it */
+	/*
+	 * kvm_run->ready_for_interrupt_injection决定了当前是否可以向虚拟机注入
+	 * 中断；
+	 */
         if (run->ready_for_interrupt_injection &&
             (cpu->interrupt_request & CPU_INTERRUPT_HARD) &&
             (env->eflags & IF_MASK)) {
             int irq;
 
+            /*
+             * 将硬中断消除
+             */
             cpu->interrupt_request &= ~CPU_INTERRUPT_HARD;
             irq = cpu_get_pic_interrupt(env);
             if (irq >= 0) {
@@ -4368,6 +4378,16 @@ void kvm_arch_pre_run(CPUState *cpu, struct kvm_run *run)
 
                 intr.irq = irq;
                 DPRINTF("injected interrupt %d\n", irq);
+		/*
+		 * 对于qemu模拟的pic，最终还是通过KVM_INTERRUPT向kvm注入的；之
+		 * 所以不能和qemu模拟的ioapic共用KVM_IRQ_LINE + msi routing
+		 * table方式的原因，是因为pic mode下，lapic根本就没有打开；
+		 *
+		 * 所以，qemu中pic_irq_request负责将目标vcpu kick出来（用的信号，
+		 * 其实这个方法挺慢的，本质上就是等vcpu自己退出，然后kvm退出，
+		 * 很消极），然后在下次进入kvm时调用本函数，用KVM_INTERRUPT进行
+		 * 注入；
+		 */
                 ret = kvm_vcpu_ioctl(cpu, KVM_INTERRUPT, &intr);
                 if (ret < 0) {
                     fprintf(stderr,
@@ -4381,6 +4401,10 @@ void kvm_arch_pre_run(CPUState *cpu, struct kvm_run *run)
          * interrupt, request an interrupt window exit.  This will
          * cause a return to userspace as soon as the guest is ready to
          * receive interrupts. */
+	/*
+	 * 如果cpu->interrupt_request中还有未处理的中断，说明上面ready_for_interrupt_injection
+	 * 不成立，这里就要设置好request_interrupt_window，使kvm尽快退出；
+	 */
         if ((cpu->interrupt_request & CPU_INTERRUPT_HARD)) {
             run->request_interrupt_window = 1;
         } else {
@@ -4840,6 +4864,9 @@ void kvm_arch_init_irq_routing(KVMState *s)
     kvm_msi_via_irqfd_allowed = true;
     kvm_gsi_routing_allowed = true;
 
+    /*
+     * 诶，split模式下，就直接设置了msi的中断路由表项；
+     */
     if (kvm_irqchip_is_split()) {
         int i;
 

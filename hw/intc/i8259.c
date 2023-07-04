@@ -334,6 +334,9 @@ static uint64_t pic_ioport_read(void *opaque, hwaddr addr,
         ret = pic_get_irq(s);
         if (ret >= 0) {
             pic_intack(s, ret);
+            /*
+             * 返回值的最高位表示是否有有效的中断
+             */ 
             ret |= 0x80;
         } else {
             ret = 0;
@@ -418,6 +421,9 @@ qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq)
 
     irq_set = g_new0(qemu_irq, ISA_NUM_IRQS);
 
+    /*
+     * 创建PIC master device，挂到isa bus上
+     */
     isadev = i8259_init_chip(TYPE_I8259, bus, true);
     dev = DEVICE(isadev);
 
@@ -428,6 +434,9 @@ qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq)
 
     isa_pic = dev;
 
+    /*
+     * 创建PIC slave device，挂到isa bus上
+     */
     isadev = i8259_init_chip(TYPE_I8259, bus, false);
     dev = DEVICE(isadev);
 

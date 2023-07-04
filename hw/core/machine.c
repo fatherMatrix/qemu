@@ -1178,6 +1178,10 @@ void machine_run_board_init(MachineState *machine)
     }
 
     accel_init_interfaces(ACCEL_GET_CLASS(machine->accelerator));
+    /*
+     * 参见DEFINE_I440FX_MACHINE:
+     *       mv->init = 展开为主要调用pc_init1的函数
+     */ 
     machine_class->init(machine);
     phase_advance(PHASE_MACHINE_INITIALIZED);
 }

@@ -537,13 +537,22 @@ static void pic_irq_request(void *opaque, int irq, int level)
     trace_x86_pic_interrupt(irq, level);
     if (cpu->apic_state && !kvm_irqchip_in_kernel() &&
         !whpx_apic_in_platform()) {
+	/*
+	 * 走到这里，说明起用了apic
+	 */
         CPU_FOREACH(cs) {
             cpu = X86_CPU(cs);
+            /*
+             * 检查LVT LINT0的mask，决定lapic收不收pic的中断；
+             */
             if (apic_accept_pic_intr(cpu->apic_state)) {
                 apic_deliver_pic_intr(cpu->apic_state, level);
             }
         }
     } else {
+	/*
+	 * 走到这里，说明没有启用apic
+	 */
         if (level) {
             cpu_interrupt(cs, CPU_INTERRUPT_HARD);
         } else {
@@ -593,15 +602,28 @@ void gsi_handler(void *opaque, int n, int level)
 
     trace_x86_gsi_interrupt(n, level);
     switch (n) {
+    /*
+     * 0 - 15
+     */
     case 0 ... ISA_NUM_IRQS - 1:
         if (s->i8259_irq[n]) {
             /* Under KVM, Kernel will forward to both PIC and IOAPIC */
+	    /*
+             * 8259在qemu: pic_set_irq
+             * 8259在kvm: kvm_pic_set_irq
+             */
             qemu_set_irq(s->i8259_irq[n], level);
         }
         /* fall through */
+    /*
+     * 16 - 23
+     */
     case ISA_NUM_IRQS ... IOAPIC_NUM_PINS - 1:
         qemu_set_irq(s->ioapic_irq[n], level);
         break;
+    /*
+     * 24 - 47
+     */
     case IO_APIC_SECONDARY_IRQBASE
         ... IO_APIC_SECONDARY_IRQBASE + IOAPIC_NUM_PINS - 1:
         qemu_set_irq(s->ioapic2_irq[n - IO_APIC_SECONDARY_IRQBASE], level);
@@ -627,6 +649,23 @@ void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)
     sysbus_realize_and_unref(d, &error_fatal);
     sysbus_mmio_map(d, 0, IO_APIC_DEFAULT_ADDRESS);
 
+    /*
+     * 对于TYPE_KVM_IOAPIC:
+     *   class_init = kvm_ioapic_class_init
+     *     realize = kvm_ioapic_realize
+     *       qdev_init_gpio_in			// 最终是在这里初始化了端口 !!!!!!!!
+     *         kvm_ioapic_set_irq               // 设置端口qemu_irq的handler为kvm_ioapic_set_irq
+     *           kvm_vm_ioctl(KVM_IRQ_LINE)	// 还是通过KVM_IRQ_LINE进去的
+     *
+     * 对于TYPE_IOAPIC:
+     *   class_init = ioapic_class_init
+     *     realize = ioapic_realize
+     *       qdev_init_gpio_in			// 在这里初始化了端口 !!!!!!!!
+     *         ioapic_set_irq                   // 设置端口qemu_irq的handler为ioapic_set_irq
+     *           ioapic_service
+     *             kvm_set_irq
+     *               kvm_vm_ioctl(KVM_IRQ_LINE) // 还是KVM_IRQ_LINE进去的
+     */
     for (i = 0; i < IOAPIC_NUM_PINS; i++) {
         gsi_state->ioapic_irq[i] = qdev_get_gpio_in(dev, i);
     }

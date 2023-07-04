@@ -142,6 +142,9 @@ static void apic_local_deliver(APICCommonState *s, int vector)
 
     trace_apic_local_deliver(vector, (lvt >> 8) & 7);
 
+    /*
+     * 如果被mask了，退出
+     */
     if (lvt & APIC_LVT_MASKED)
         return;
 
