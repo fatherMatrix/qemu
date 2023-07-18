@@ -385,6 +385,7 @@ void aio_dispatch(AioContext *ctx)
 
     /* 先poll及call下半部 */
     aio_bh_poll(ctx);
+    /* AioHandler */
     aio_dispatch_handlers(ctx);
     aio_free_deleted_handlers(ctx);
     qemu_lockcnt_dec(&ctx->list_lock);

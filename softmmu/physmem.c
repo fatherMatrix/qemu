@@ -3085,7 +3085,7 @@ void cpu_exec_init_all(void)
      */
     finalize_target_page_bits();
     /*
-     * 创建若干个包含所有地址空间的MemoryRegion
+     * 创建io_mem_unassigned
      */
     io_mem_init();
     /*

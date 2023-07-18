@@ -31,6 +31,9 @@ static void *kvm_vcpu_thread_fn(void *arg)
 
     rcu_register_thread();
 
+    /*
+     * 锁住iothread
+     */
     qemu_mutex_lock_iothread();
     qemu_thread_get_self(cpu->thread);
     cpu->thread_id = qemu_get_thread_id();
@@ -46,6 +49,12 @@ static void *kvm_vcpu_thread_fn(void *arg)
 
     do {
         if (cpu_can_run(cpu)) {
+            /*
+             * 该函数内部，在进入guest态之前会解锁iothread；
+             *                                ^^^^
+             * 在出来之后会锁住iothread；
+             *             ^^^^
+             */
             r = kvm_cpu_exec(cpu);
             if (r == EXCP_DEBUG) {
                 cpu_handle_guest_debug(cpu);
@@ -56,6 +65,9 @@ static void *kvm_vcpu_thread_fn(void *arg)
 
     kvm_destroy_vcpu(cpu);
     cpu_thread_signal_destroyed(cpu);
+    /*
+     * 解锁iothread
+     */
     qemu_mutex_unlock_iothread();
     rcu_unregister_thread();
     return NULL;

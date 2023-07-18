@@ -59,7 +59,11 @@ struct ThreadPool {
     QemuCond worker_stopped;	/* 等待线程结束的条件变量 */
     QemuSemaphore sem;		/* 通知信号量 */
     int max_threads;		/* 最大线程数量 */
-    QEMUBH *new_thread_bh;	/* 用于创建新线程的下半部，指向spawn_thread_bh_fn */
+    QEMUBH *new_thread_bh;	/* 用于创建新线程的下半部，指向spawn_thread_bh_fn；
+				   这个下半部的作用是：当ThreadPool需要创建新线程时，调度
+				   这个下半部，然后在主线程的AioContext中下次dispatch时，
+				   异步调用下半部处理函数。好绕啊，为什么要去主线程创建线程池
+				   线程呢？ */
 
     /* The following variables are only accessed from one AioContext. */
     /* 任务队列，只能在aio_context中访问，处理结果回调 */
@@ -112,6 +116,7 @@ static void *worker_thread(void *opaque)
 
         qemu_mutex_lock(&pool->lock);
 
+	/* 主线程的AioContext来收割完成的线程池任务 */
         qemu_bh_schedule(pool->completion_bh);
     }
 

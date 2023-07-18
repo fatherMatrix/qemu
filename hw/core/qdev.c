@@ -527,6 +527,10 @@ static void device_set_realized(Object *obj, bool value, Error **errp)
             }
         }
 
+        /*
+         * 这个realize字段经常被子类调用device_class_set_parent_realize()改写，
+         * 使其调用子类重写的具现化函数；
+         */
         if (dc->realize) {
             dc->realize(dev, &local_err);
             if (local_err != NULL) {

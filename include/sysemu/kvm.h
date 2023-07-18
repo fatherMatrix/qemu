@@ -218,6 +218,9 @@ struct KVMState;
 
 #define TYPE_KVM_ACCEL ACCEL_CLASS_NAME("kvm")
 typedef struct KVMState KVMState;
+/*
+ * 因为TYPE_KVM_ACCEL没有自己的Class，所以这里使用的是弱化版的OBJECT_DECLARE_TYPE
+ */
 DECLARE_INSTANCE_CHECKER(KVMState, KVM_STATE,
                          TYPE_KVM_ACCEL)
 

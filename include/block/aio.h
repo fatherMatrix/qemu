@@ -128,6 +128,7 @@ struct AioContext {
     QemuRecMutex lock;
 
     /* The list of registered AIO handlers.  Protected by ctx->list_lock. */
+	/* 使用aio_set_fd_handler()来增删元素 */
     AioHandlerList aio_handlers;
 
     /* The list of AIO handlers to be deleted.  Protected by ctx->list_lock. */

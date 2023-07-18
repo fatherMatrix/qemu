@@ -1177,6 +1177,10 @@ void machine_run_board_init(MachineState *machine)
                                    "on", false);
     }
 
+    /*
+     * 初始化加速器
+     * - kvm
+     */
     accel_init_interfaces(ACCEL_GET_CLASS(machine->accelerator));
     /*
      * 参见DEFINE_I440FX_MACHINE:

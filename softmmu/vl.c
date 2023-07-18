@@ -162,6 +162,9 @@ static ram_addr_t maxram_size;
 static uint64_t ram_slots;
 static int display_remote;
 static int snapshot;
+/*
+ * static变量默认应该为0
+ */
 static bool preconfig_requested;
 static QemuPluginList plugin_list = QTAILQ_HEAD_INITIALIZER(plugin_list);
 static BlockdevOptionsQueue bdo_queue = QSIMPLEQ_HEAD_INITIALIZER(bdo_queue);
@@ -3711,6 +3714,9 @@ void qemu_init(int argc, char **argv, char **envp)
 
     configure_rtc(qemu_find_opts_singleton("rtc"));
 
+    /*
+     * 创建虚拟机
+     */
     qemu_create_machine(machine_opts_dict);
 
     suspend_mux_open();
@@ -3727,6 +3733,11 @@ void qemu_init(int argc, char **argv, char **envp)
     /*
      * Note: uses machine properties such as kernel-irqchip, must run
      * after qemu_apply_machine_options.
+     *
+     * 配置加速器：
+     * - tcg
+     * - kvm
+     * - ...
      */
     configure_accelerators(argv[0]);
     phase_advance(PHASE_ACCEL_CREATED);
@@ -3780,6 +3791,12 @@ void qemu_init(int argc, char **argv, char **envp)
 
     /*
      * 这里面会调用current_machine的init函数
+     *
+     * 如果指定了--preconfig命令行参数，preconfig_requested为true，不进入下面的
+     * 循环；
+     * 如果没有指定--preconfig命令行参数，进入下面的循环；
+     *
+     * 该函数含义见：qemu-options.hx
      */
     if (!preconfig_requested) {
         qmp_x_exit_preconfig(&error_fatal);

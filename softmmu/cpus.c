@@ -642,6 +642,10 @@ void qemu_init_vcpu(CPUState *cpu)
 
     /* accelerators all implement the AccelOpsClass */
     g_assert(cpus_accel != NULL && cpus_accel->create_vcpu_thread != NULL);
+    /*
+     * 对于kvm来说，这里调用的是kvm_start_vcpu_thread();
+     * - 参见kvm_accel_ops_class_init()
+     */
     cpus_accel->create_vcpu_thread(cpu);
 
     while (!cpu->created) {

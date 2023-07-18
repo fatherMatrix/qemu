@@ -34,6 +34,9 @@ int accel_init_machine(AccelState *accel, MachineState *ms)
 {
     AccelClass *acc = ACCEL_GET_CLASS(accel);
     int ret;
+    /*
+     * 将MachineState->accelerator设置为对应AccelClass
+     */
     ms->accelerator = accel;
     *(acc->allowed) = true;
     /*

@@ -268,6 +268,15 @@ static void cpu_class_init(ObjectClass *klass, void *data)
     k->gdb_read_register = cpu_common_gdb_read_register;
     k->gdb_write_register = cpu_common_gdb_write_register;
     set_bit(DEVICE_CATEGORY_CPU, dc->categories);
+    /*
+     * 之所以允许此处对DeviceClass的realize字段直接赋值，是因为CPUClass是
+     * DeviceClass的直接派生类，而且在DeviceClass->class_init中没有对该字段进行
+     * 赋值。
+     *
+     * 对于X86CPUClass，则必须使用device_class_set_parent_realize()函数，先将
+     * DeviceClass的realize函数保存在X86CPUClass->parent_realize中，再设置其想
+     * 设置的realize函数到DeviceClass->realize字段中；
+     */
     dc->realize = cpu_common_realizefn;
     dc->unrealize = cpu_common_unrealizefn;
     dc->reset = cpu_common_reset;

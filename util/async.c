@@ -56,10 +56,10 @@ enum {
 };
 
 struct QEMUBH {
-    AioContext *ctx;
+    AioContext *ctx;	/* 所属上下文 */
     const char *name;
-    QEMUBHFunc *cb;
-    void *opaque;
+    QEMUBHFunc *cb;	/* 回调函数 */
+    void *opaque;	/* 回调函数参数 */
     QSLIST_ENTRY(QEMUBH) next;
     unsigned flags;
 };
@@ -518,7 +518,7 @@ AioContext *aio_context_new(Error **errp)
     int ret;
     AioContext *ctx;
 
-    /* 这里分配了一个新的GSource，作为AioContext的第一个成员 */
+    /* 分配内存，设置处理函数 */
     ctx = (AioContext *) g_source_new(&aio_source_funcs, sizeof(AioContext));
     QSLIST_INIT(&ctx->bh_list);
     QSIMPLEQ_INIT(&ctx->bh_slice_list);
@@ -539,7 +539,7 @@ AioContext *aio_context_new(Error **errp)
     ctx->co_schedule_bh = aio_bh_new(ctx, co_schedule_bh_cb, ctx);
     QSLIST_INIT(&ctx->scheduled_coroutines);
 
-    /* 添加AioHandlers */
+    /* 设置notifier对应的处理函数 */
     aio_set_event_notifier(ctx, &ctx->notifier,
                            false,
                            aio_context_notifier_cb,
@@ -552,6 +552,7 @@ AioContext *aio_context_new(Error **errp)
     ctx->linux_io_uring = NULL;
 #endif
 
+    /* 默认线程池为NULL */
     ctx->thread_pool = NULL;
     qemu_rec_mutex_init(&ctx->lock);
     timerlistgroup_init(&ctx->tlg, aio_timerlist_notify, ctx);
