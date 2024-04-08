@@ -273,7 +273,10 @@ static int os_host_main_loop_wait(int64_t timeout)
      */
     glib_pollfds_fill(&timeout);
 
-    /* 释放Big Qemu Lock */
+    /* 
+     * 释放Big Qemu Lock
+     * - 对应哪里的加锁动作？
+     */
     qemu_mutex_unlock_iothread();
     replay_mutex_unlock();
 

@@ -3706,6 +3706,9 @@ void qemu_init(int argc, char **argv, char **envp)
     }
     trace_init_file();
 
+    /*
+     * 创建主循环
+     */
     qemu_init_main_loop(&error_fatal);
     cpu_timers_init();
 

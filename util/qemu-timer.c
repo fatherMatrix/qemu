@@ -348,6 +348,10 @@ int qemu_poll_ns(GPollFD *fds, guint nfds, int64_t timeout)
         return ppoll((struct pollfd *)fds, nfds, &ts, NULL);
     }
 #else
+    /*
+     * 为什么qemu现在还是使用poll()方法？
+     * - https://gitlab.gnome.org/GNOME/glib/-/issues/693
+     */
     return g_poll(fds, nfds, qemu_timeout_ns_to_ms(timeout));
 #endif
 }
