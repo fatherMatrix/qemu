@@ -1061,6 +1061,9 @@ static int net_client_init1(const Netdev *netdev, bool is_netdev, Error **errp)
         return -1;
     }
 
+    /*
+     * 根据设备类型调用相关的初始化函数
+     */
     if (net_client_init_fun[netdev->type](netdev, netdev->id, peer, errp) < 0) {
         /* FIXME drop when all init functions store an Error */
         if (errp && !*errp) {
@@ -1115,6 +1118,10 @@ void show_netdevs(void)
     }
 }
 
+/*
+ * net_init_netdev() -> net_client_init(is_netdev=true)
+ * net_init_client() -> net_client_init(is_netdev=false)
+ */
 static int net_client_init(QemuOpts *opts, bool is_netdev, Error **errp)
 {
     gchar **substrings = NULL;
@@ -1158,6 +1165,10 @@ static int net_client_init(QemuOpts *opts, bool is_netdev, Error **errp)
         qemu_opts_set_id(opts, id_generate(ID_NET));
     }
 
+    /*
+     * visit_type_XXX()函数是自动生成的
+     * - 操你妈的，好好写代码能死吗？
+     */
     if (visit_type_Netdev(v, NULL, &object, errp)) {
         ret = net_client_init1(object, is_netdev, errp);
     }
@@ -1558,6 +1569,9 @@ int net_init_clients(Error **errp)
 
     QTAILQ_INIT(&net_clients);
 
+    /*
+     * netdev指定网卡后端设备
+     */
     if (qemu_opts_foreach(qemu_find_opts("netdev"),
                           net_init_netdev, NULL, errp)) {
         return -1;
@@ -1567,6 +1581,9 @@ int net_init_clients(Error **errp)
         return -1;
     }
 
+    /*
+     * net指定前端网卡
+     */
     if (qemu_opts_foreach(qemu_find_opts("net"), net_init_client, NULL, errp)) {
         return -1;
     }

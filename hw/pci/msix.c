@@ -337,8 +337,15 @@ int msix_init(struct PCIDevice *dev, unsigned short nentries,
 
     msix_mask_all(dev, nentries);
 
+    /*
+     * 这里配置的是BAR空间中的MMIO
+     */
     memory_region_init_io(&dev->msix_table_mmio, OBJECT(dev), &msix_table_mmio_ops, dev,
                           "msix-table", table_size);
+    /*
+     * table_bar和pba_bar分别表示table和pba这个区域所在的BAR的MMIO
+     * - 对于virtio设备，这里就是BAR 4
+     */
     memory_region_add_subregion(table_bar, table_offset, &dev->msix_table_mmio);
     memory_region_init_io(&dev->msix_pba_mmio, OBJECT(dev), &msix_pba_mmio_ops, dev,
                           "msix-pba", pba_size);

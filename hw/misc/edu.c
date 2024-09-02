@@ -366,6 +366,10 @@ static void pci_edu_realize(PCIDevice *pdev, Error **errp)
 
     pci_config_set_interrupt_pin(pci_conf, 1);
 
+    /*
+     * 配置设备的MSI Capability
+     * - MSI-X: msix_init()
+     */
     if (msi_init(pdev, 0, 1, true, false, errp)) {
         return;
     }
@@ -377,8 +381,14 @@ static void pci_edu_realize(PCIDevice *pdev, Error **errp)
     qemu_thread_create(&edu->thread, "edu", edu_fact_thread,
                        edu, QEMU_THREAD_JOINABLE);
 
+    /*
+     * 初始化一个MMIO
+     */
     memory_region_init_io(&edu->mmio, OBJECT(edu), &edu_mmio_ops, edu,
                     "edu-mmio", 1 * MiB);
+    /*
+     * 将MMIO注册为设备的BAR 0
+     */
     pci_register_bar(pdev, 0, PCI_BASE_ADDRESS_SPACE_MEMORY, &edu->mmio);
 }
 

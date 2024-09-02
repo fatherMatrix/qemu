@@ -1540,6 +1540,9 @@ MemTxResult memory_region_dispatch_write(MemoryRegion *mr,
     }
 }
 
+/*
+ * 为什么只有size，没有start？
+ */
 void memory_region_init_io(MemoryRegion *mr,
                            Object *owner,
                            const MemoryRegionOps *ops,

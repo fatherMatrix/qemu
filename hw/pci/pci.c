@@ -2133,12 +2133,21 @@ static void pci_qdev_realize(DeviceState *qdev, Error **errp)
         pci_dev->cap_present |= QEMU_PCI_CAP_EXPRESS;
     }
 
+    /*
+     * 设备注册
+     * - 分配bus中的插槽号
+     * - 分配pci设备配置空间
+     * - ... ...
+     */
     pci_dev = do_pci_register_device(pci_dev,
                                      object_get_typename(OBJECT(qdev)),
                                      pci_dev->devfn, errp);
     if (pci_dev == NULL)
         return;
 
+    /*
+     * pci_edu_realize()
+     */
     if (pc->realize) {
         pc->realize(pci_dev, &local_err);
         if (local_err) {
@@ -2179,6 +2188,10 @@ static void pci_qdev_realize(DeviceState *qdev, Error **errp)
         is_default_rom = true;
     }
 
+    /*
+     * 加载pci设备的rom
+     * - 调用pci_register_bar()将该rom注册到设备的PCI BAR中
+     */
     pci_add_option_rom(pci_dev, is_default_rom, &local_err);
     if (local_err) {
         error_propagate(errp, local_err);
@@ -2473,6 +2486,11 @@ int pci_add_capability(PCIDevice *pdev, uint8_t cap_id,
 
     config = pdev->config + offset;
     config[PCI_CAP_LIST_ID] = cap_id;
+    /*
+     * 所以这里是将新的capability list item插入到链表的开头
+     * - 这里只是插入的capability list item，那这个item指向的bar空间的内容什么
+     *   时候准备呢？
+     */
     config[PCI_CAP_LIST_NEXT] = pdev->config[PCI_CAPABILITY_LIST];
     pdev->config[PCI_CAPABILITY_LIST] = offset;
     pdev->config[PCI_STATUS] |= PCI_STATUS_CAP_LIST;

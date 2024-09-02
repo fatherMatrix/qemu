@@ -270,6 +270,9 @@ static void pc_init1(MachineState *machine,
     pc_basic_device_init(pcms, isa_bus, x86ms->gsi, &rtc_state, true,
                          0x4);
 
+    /*
+     * 创建网卡
+     */
     pc_nic_init(pcmc, isa_bus, pci_bus);
 
     if (pcmc->pci_enabled) {
