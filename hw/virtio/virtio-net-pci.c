@@ -61,6 +61,9 @@ static void virtio_net_pci_realize(VirtIOPCIProxy *vpci_dev, Error **errp)
 
     virtio_net_set_netclient_name(&dev->vdev, qdev->id,
                                   object_get_typename(OBJECT(qdev)));
+    /*
+     * 这里开始具现化VirtIONetPCI复合设备的virtio设备部分：VirtIONet
+     */
     qdev_realize(vdev, BUS(&vpci_dev->bus), errp);
 }
 

@@ -1106,6 +1106,12 @@ static PCIDevice *do_pci_register_device(PCIDevice *pci_dev,
         pci_init_bus_master(pci_dev);
     }
     pci_dev->irq_state = 0;
+    /*
+     * 分配配置空间
+     * - BAR空间是在哪里分配的呢？
+     *   > virtio_pci_modern_regions_init() ?
+     * - 配置空间中的capability元素是如何分配？即如何决定每个元素在哪个位置？
+     */
     pci_config_alloc(pci_dev);
 
     pci_config_set_vendor_id(pci_dev->config, pc->vendor_id);
@@ -2147,6 +2153,7 @@ static void pci_qdev_realize(DeviceState *qdev, Error **errp)
 
     /*
      * pci_edu_realize()
+     * virtio_pci_realize()
      */
     if (pc->realize) {
         pc->realize(pci_dev, &local_err);
@@ -2462,6 +2469,9 @@ int pci_add_capability(PCIDevice *pdev, uint8_t cap_id,
     int i, overlapping_cap;
 
     if (!offset) {
+        /*
+         * 找到合适的config空间
+         */
         offset = pci_find_space(pdev, size);
         /* out of PCI config space is programming error */
         assert(offset);

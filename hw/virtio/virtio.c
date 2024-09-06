@@ -3643,6 +3643,10 @@ static void virtio_device_realize(DeviceState *dev, Error **errp)
     /* Devices should either use vmsd or the load/save methods */
     assert(!vdc->vmsd || !vdc->load);
 
+    /*
+     * VirtIODevice->realize = virtio_net_device_realize()
+     * - 参见virtio_net_class_init()
+     */
     if (vdc->realize != NULL) {
         vdc->realize(dev, &err);
         if (err != NULL) {

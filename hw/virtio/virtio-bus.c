@@ -74,6 +74,10 @@ void virtio_bus_device_plugged(VirtIODevice *vdev, Error **errp)
         return;
     }
 
+    /*
+     * virtio_pci_device_plugged()
+     * - 参见virtio_pci_bus_class_init()
+     */
     if (klass->device_plugged != NULL) {
         klass->device_plugged(qbus->parent, &local_err);
     }

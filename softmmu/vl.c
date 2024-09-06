@@ -2783,6 +2783,9 @@ void qemu_init(int argc, char **argv, char **envp)
     bool userconfig = true;
     FILE *vmstate_dump_file = NULL;
 
+    /*
+     * 将各类QemuOptsList加入vm_config_groups数组
+     */
     qemu_add_opts(&qemu_drive_opts);
     qemu_add_drive_opts(&qemu_legacy_drive_opts);
     qemu_add_drive_opts(&qemu_common_drive_opts);
@@ -2826,7 +2829,10 @@ void qemu_init(int argc, char **argv, char **envp)
 
     qemu_init_subsystems();
 
-    /* first pass of option parsing */
+    /*
+     * first pass of option parsing
+     * - 这一圈儿的作用是判断"no-user-config"选项在不在
+     */
     optind = 1;
     while (optind < argc) {
         if (argv[optind][0] != '-') {
@@ -2844,12 +2850,18 @@ void qemu_init(int argc, char **argv, char **envp)
         }
     }
 
+    /*
+     * 根据上面的no-user-config的存在与否加载不同的qemu.conf
+     */
     machine_opts_dict = qdict_new();
     if (userconfig) {
         qemu_read_default_config_file(&error_fatal);
     }
 
-    /* second pass of option parsing */
+    /*
+     * second pass of option parsing
+     * - 剩余参数的解析
+     */
     optind = 1;
     for(;;) {
         if (optind >= argc)

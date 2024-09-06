@@ -1152,10 +1152,17 @@ static int virtio_pci_add_mem_cap(VirtIOPCIProxy *proxy,
     PCIDevice *dev = &proxy->pci_dev;
     int offset;
 
+    /*
+     * 在pci配置空间中找到合适的空间，来存放capability list item，参数0表示由
+     * qemu自动选择合适的空间；
+     */
     offset = pci_add_capability(dev, PCI_CAP_ID_VNDR, 0,
                                 cap->cap_len, &error_abort);
 
     assert(cap->cap_len >= sizeof *cap);
+    /*
+     * 给pci配置空间中的capability list item赋值
+     */
     memcpy(dev->config + offset + PCI_CAP_FLAGS, &cap->cap_len,
            cap->cap_len - PCI_CAP_FLAGS);
 
@@ -1560,12 +1567,19 @@ static void virtio_pci_modern_region_map(VirtIOPCIProxy *proxy,
                                          MemoryRegion *mr,
                                          uint8_t bar)
 {
+    /*
+     * 向PCI的bar空间中添加subregion，subregion中保存的就是每个capability item
+     * 的真实数据
+     */
     memory_region_add_subregion(mr, region->offset, &region->mr);
 
     cap->cfg_type = region->type;
     cap->bar = bar;
     cap->offset = cpu_to_le32(region->offset);
     cap->length = cpu_to_le32(region->size);
+    /*
+     * 向capability list中添加item
+     */
     virtio_pci_add_mem_cap(proxy, cap);
 
 }
@@ -1641,6 +1655,9 @@ static void virtio_pci_device_plugged(DeviceState *d, Error **errp)
         }
     }
 
+    /*
+     * 判断是否为modern模式
+     */
     modern = virtio_pci_modern(proxy);
 
     config = proxy->pci_dev.config;
@@ -1916,6 +1933,9 @@ static void virtio_pci_realize(PCIDevice *pci_dev, Error **errp)
     }
 
     virtio_pci_bus_new(&proxy->bus, sizeof(proxy->bus), proxy);
+    /*
+     * 调用VirtioPCIClass->realize()，即virtio_net_pci_realize()
+     */
     if (k->realize) {
         k->realize(proxy, errp);
     }
@@ -2002,6 +2022,9 @@ static void virtio_pci_dc_realize(DeviceState *qdev, Error **errp)
         pci_dev->cap_present |= QEMU_PCI_CAP_EXPRESS;
     }
 
+    /*
+     * pci_qdev_realize()
+     */
     vpciklass->parent_dc_realize(qdev, errp);
 }
 
