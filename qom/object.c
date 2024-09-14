@@ -1444,6 +1444,11 @@ bool object_property_set(Object *obj, const char *name, Visitor *v,
         error_setg(errp, QERR_PERMISSION_DENIED);
         return false;
     }
+    /*
+     * - property_set_alias()
+     * - set_prop_arraylen()
+     * - set_prop_arraylen_virtio_net()
+     */
     prop->set(obj, v, name, prop->opaque, errp);
     return !*errp;
 }

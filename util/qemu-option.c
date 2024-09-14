@@ -805,6 +805,9 @@ static bool opts_do_parse(QemuOpts *opts, const char *params,
     QemuOpt *opt;
 
     for (p = params; *p;) {
+        /*
+         * 产生option、value对
+         */
         p = get_opt_name_value(p, firstname, warn_on_flag, help_wanted, &option, &value);
         if (help_wanted && *help_wanted) {
             g_free(option);
@@ -819,6 +822,9 @@ static bool opts_do_parse(QemuOpts *opts, const char *params,
             continue;
         }
 
+        /*
+         * 将产生的option、value对创建为QemuOpt，并挂入对应的QemuOpts中
+         */
         opt = opt_create(opts, option, value);
         g_free(option);
         if (!opt_validate(opt, errp)) {
@@ -889,6 +895,9 @@ static QemuOpts *opts_parse(QemuOptsList *list, const char *params,
     assert(!permit_abbrev || list->implied_opt_name);
     firstname = permit_abbrev ? list->implied_opt_name : NULL;
 
+    /*
+     * 创建QemuOpts，并将其链入对应QemuOptsList内部的链表中
+     */
     opts = qemu_opts_create(list, id, !list->merge_lists, errp);
     g_free(id);
     if (opts == NULL) {

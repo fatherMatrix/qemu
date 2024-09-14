@@ -330,6 +330,9 @@ bool qdev_realize(DeviceState *dev, BusState *bus, Error **errp)
         assert(!DEVICE_GET_CLASS(dev)->bus_type);
     }
 
+    /*
+     * qdev_realize() -> virtio_device_realize() -> virtio_net_device_realize()
+     */
     return object_property_set_bool(OBJECT(dev), "realized", true, errp);
 }
 

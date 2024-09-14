@@ -51,6 +51,10 @@ bool visit_start_struct(Visitor *v, const char *name, void **obj,
         assert(size);
         assert(!(v->type & VISITOR_OUTPUT) || *obj);
     }
+    /*
+     * 目前观察到的：
+     * - qobject_input_start_struct()
+     */
     ok = v->start_struct(v, name, obj, size, errp);
     if (obj && (v->type & VISITOR_INPUT)) {
         assert(ok != !*obj);
@@ -189,6 +193,10 @@ static bool visit_type_uintN(Visitor *v, uint64_t *obj, const char *name,
 
     assert(v->type == VISITOR_INPUT || value <= max);
 
+    /*
+     * - qobject_input_type_uint64()
+     * - qobject_input_type_uint64_keyval()
+     */
     if (!v->type_uint64(v, name, &value, errp)) {
         return false;
     }

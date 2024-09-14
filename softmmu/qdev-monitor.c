@@ -624,6 +624,12 @@ DeviceState *qdev_device_add_from_qdict(const QDict *opts,
         return NULL;
     }
 
+    /*
+     * 这个driver就是e1000、virtio-net-pci等字符串，即命令行中的：
+     * -device e1000,xxx
+     * -device virtio-net-pci,xxx
+     */
+
     /* find driver */
     dc = qdev_get_device_class(&driver, errp);
     if (!dc) {
@@ -670,7 +676,10 @@ DeviceState *qdev_device_add_from_qdict(const QDict *opts,
         return NULL;
     }
 
-    /* create device */
+    /*
+     * create device
+     * - 这里返回的应该是个VirtIONetPCI
+     */
     dev = qdev_new(driver);
 
     /* Check whether the hotplug is allowed by the machine */
@@ -702,6 +711,14 @@ DeviceState *qdev_device_add_from_qdict(const QDict *opts,
     qdict_del(dev->opts, "bus");
     qdict_del(dev->opts, "id");
 
+    /*
+     * 这个parent_obj应该是VirtIOPCIProxy设备的
+     * - len-queue_size这个属性本来是添加到VirtIONet设备上的，这里查找的确实是
+     *   VirtIOPCIProxy设备的属性。之所以可以查找到，是因为：
+     *   > virtio_net_pci_instance_init()
+     *       virtio_instance_init_common()
+     *         qdev_alias_all_properties()
+     */
     object_set_properties_from_keyval(&dev->parent_obj, dev->opts, from_json,
                                       errp);
     if (*errp) {

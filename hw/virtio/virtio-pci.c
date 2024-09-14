@@ -1722,8 +1722,16 @@ static void virtio_pci_device_plugged(DeviceState *d, Error **errp)
 
         struct virtio_pci_cfg_cap *cfg_mask;
 
+        /*
+         * 配置到每个Capability List Item对应BAR 4区域的回调函数
+         */
         virtio_pci_modern_regions_init(proxy, vdev->name);
 
+        /*
+         * 将每个Capability List Item写入配置空间中，并注册上面初始化好的MR到
+         * BAR 4中；
+         * - 配置空间本身的读写回调在哪里设置的呢？
+         */
         virtio_pci_modern_mem_region_map(proxy, &proxy->common, &cap);
         virtio_pci_modern_mem_region_map(proxy, &proxy->isr, &cap);
         virtio_pci_modern_mem_region_map(proxy, &proxy->device, &cap);
@@ -1834,6 +1842,10 @@ static void virtio_pci_realize(PCIDevice *pci_dev, Error **errp)
     proxy->modern_io_bar_idx  = 2;
     proxy->modern_mem_bar_idx = 4;
 
+    /*
+     * 这些偏移信息如何表现在guest virtio-pci驱动读到的配置空间中？
+     * - 对应的VirtIOPCIRegion.MemoryRegion的回调函数是什么？在哪里设置？
+     */
     proxy->common.offset = 0x0;
     proxy->common.size = 0x1000;
     proxy->common.type = VIRTIO_PCI_CAP_COMMON_CFG;
@@ -1854,7 +1866,11 @@ static void virtio_pci_realize(PCIDevice *pci_dev, Error **errp)
     proxy->notify_pio.size = 0x4;
     proxy->notify_pio.type = VIRTIO_PCI_CAP_NOTIFY_CFG;
 
-    /* subclasses can enforce modern, so do this unconditionally */
+    /*
+     * subclasses can enforce modern, so do this unconditionally
+     * - 初始化整个BAR 4
+     * - 其他BAR在哪里初始化的？
+     */
     memory_region_init(&proxy->modern_bar, OBJECT(proxy), "virtio-pci",
                        /* PCI BAR regions must be powers of 2 */
                        pow2ceil(proxy->notify.offset + proxy->notify.size));
@@ -2095,6 +2111,15 @@ static void virtio_pci_non_transitional_instance_init(Object *obj)
 void virtio_pci_types_register(const VirtioPCIDeviceTypeInfo *t)
 {
     char *base_name = NULL;
+    /*
+     * 这个TypeInfo的name是TYPE_VIRTIO_NET_PCI/virtio-net-pci-base，其parent设
+     * 备是virtio_pci_info（VirtIOPCIProxy)
+     * - 但其instance_size是VirtIONetPCI，其中包含了VirtIONet。
+     *   > 那么VirtIONet的class_init/instance_init是在哪里调用的呢？
+     *     x virtio_net_pci_instance_init()
+     *         virtio_instance_init_common()
+     *           object_initialize_child_with_props()
+     */
     TypeInfo base_type_info = {
         .name          = t->base_name,
         .parent        = t->parent ? t->parent : TYPE_VIRTIO_PCI,
@@ -2104,6 +2129,9 @@ void virtio_pci_types_register(const VirtioPCIDeviceTypeInfo *t)
         .abstract      = true,
         .interfaces    = t->interfaces,
     };
+    /*
+     * 这个TypeInfo的name是virtio-net-pci，其parent是TYPE_VIRTIO_NET_PCI
+     */
     TypeInfo generic_type_info = {
         .name = t->generic_name,
         .parent = base_type_info.name,
@@ -2129,6 +2157,10 @@ void virtio_pci_types_register(const VirtioPCIDeviceTypeInfo *t)
         assert(!t->non_transitional_name);
         assert(!t->transitional_name);
     } else {
+        /*
+         * 内部会调用VirtioPCIDeviceTypeInfo中的class_init:
+         * - virtio_net_pci_class_init()
+         */
         base_type_info.class_init = virtio_pci_base_class_init;
         base_type_info.class_data = (void *)t;
     }

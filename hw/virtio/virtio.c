@@ -3655,6 +3655,9 @@ static void virtio_device_realize(DeviceState *dev, Error **errp)
         }
     }
 
+    /*
+     * capability所在配置空间的模拟、bar空间回调函数的设置
+     */
     virtio_bus_device_plugged(vdev, &err);
     if (err != NULL) {
         error_propagate(errp, err);

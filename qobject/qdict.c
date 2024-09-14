@@ -117,6 +117,15 @@ void qdict_put_obj(QDict *qdict, const char *key, QObject *value)
     unsigned int bucket;
     QDictEntry *entry;
 
+    /*
+     * 对于-device virtio-net-pci，其会将所有参数先放到qdict中，然后在
+     * qdev_device_add_from_qdict() -> object_set_properties_from_keyval()中依次
+     * 向Object中set，使用的是qdict_first()/qdict_next()。
+     *
+     * 由于这里使用的是散列表的存储方式，qdict_first()/qdict_next()得到的参数顺
+     * 序和用户指定的参数顺序并不一致。那么如果-device vritio-net-pci中的参数是
+     * 有前后依赖顺序的，该如何操作呢？
+     */
     bucket = tdb_hash(key) % QDICT_BUCKET_MAX;
     entry = qdict_find(qdict, key, bucket);
     if (entry) {

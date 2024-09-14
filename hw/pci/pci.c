@@ -1111,6 +1111,7 @@ static PCIDevice *do_pci_register_device(PCIDevice *pci_dev,
      * - BAR空间是在哪里分配的呢？
      *   > virtio_pci_modern_regions_init() ?
      * - 配置空间中的capability元素是如何分配？即如何决定每个元素在哪个位置？
+     *   > virtio_pci_realize()
      */
     pci_config_alloc(pci_dev);
 

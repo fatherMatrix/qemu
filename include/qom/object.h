@@ -95,6 +95,9 @@ struct ObjectProperty
     ObjectPropertyAccessor *set;
     ObjectPropertyResolve *resolve;
     ObjectPropertyRelease *release;
+    /*
+     * 在object_initialize_with_type() -> object_class_property_init_all()中调用
+     */
     ObjectPropertyInit *init;
     void *opaque;
     QObject *defval;

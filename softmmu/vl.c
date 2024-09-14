@@ -1648,7 +1648,13 @@ static const QEMUOption *lookup_opt(int argc, char **argv,
         optarg = NULL;
     }
 
+    /*
+     * 返回时*poptarg指向本轮参数
+     */
     *poptarg = optarg;
+    /*
+     * 返回时*poptind指向下一个未解析参数
+     */
     *poptind = optind;
 
     return popt;
