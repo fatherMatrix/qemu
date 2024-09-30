@@ -1147,6 +1147,12 @@ static PCIDevice *do_pci_register_device(PCIDevice *pci_dev,
         return NULL;
     }
 
+    /*
+     * virtio_read_config()
+     * - 参见：
+     *   > virtio_pci_bus_class_init()
+     *       virtio_pci_device_plugged()
+     */
     if (!config_read)
         config_read = pci_default_read_config;
     if (!config_write)
