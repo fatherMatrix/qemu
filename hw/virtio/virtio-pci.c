@@ -1731,6 +1731,7 @@ static void virtio_pci_device_plugged(DeviceState *d, Error **errp)
          * 将每个Capability List Item写入配置空间中，并注册上面初始化好的MR到
          * BAR 4中；
          * - 配置空间本身的读写回调在哪里设置的呢？
+         *   > virtio_pci_modern_regions_init()
          */
         virtio_pci_modern_mem_region_map(proxy, &proxy->common, &cap);
         virtio_pci_modern_mem_region_map(proxy, &proxy->isr, &cap);
